@@ -1,11 +1,9 @@
-import re
 from typing import List, Dict, Any
 from app.core.startup_analysis_state import StartupAnalysisState
 
 # ---------------------------------------------------------------------------
-# Keyword maps used for mock extraction.
-# TODO: replace _extract_startup_from_source() with an LLM call (e.g. via
-#       LangChain / NIM API) to do real named-entity + attribute extraction.
+# Keyword maps for keyword-based extraction (mock layer).
+# TODO: replace _extract_startup_from_source() with an LLM call via NIM API.
 # ---------------------------------------------------------------------------
 
 _SECTOR_KEYWORDS: Dict[str, List[str]] = {
@@ -17,9 +15,19 @@ _SECTOR_KEYWORDS: Dict[str, List[str]] = {
     "retailtech": ["varejo", "retail", "e-commerce", "loja", "marketplace"],
 }
 
-_TECH_KEYWORDS: List[str] = [
-    "inteligência artificial", "ia", "machine learning", "ml", "deep learning",
-    "nlp", "visão computacional", "llm", "generativa", "automação", "robótica",
+_AI_SIGNAL_KEYWORDS: List[str] = [
+    "ia",
+    "inteligência artificial",
+    "machine learning",
+    "llm",
+    "automação",
+    "dados",
+    "modelo",
+    "deep learning",
+    "nlp",
+    "visão computacional",
+    "generativa",
+    "robótica",
 ]
 
 
@@ -31,13 +39,12 @@ def _infer_sector(text: str) -> str:
     return "tech"
 
 
-def _infer_technologies(text: str) -> List[str]:
+def _extract_ai_signals(text: str) -> List[str]:
     lower = text.lower()
-    return [kw for kw in _TECH_KEYWORDS if kw in lower] or ["ia"]
+    return [kw for kw in _AI_SIGNAL_KEYWORDS if kw in lower]
 
 
 def _extract_name_from_title(title: str) -> str:
-    """Derives a startup-like name from the source title (first segment before ' – ' or '|')."""
     for sep in (" – ", " | ", " - "):
         if sep in title:
             return title.split(sep)[0].strip()
@@ -49,7 +56,7 @@ def _extract_startup_from_source(source: Dict[str, Any], query: str) -> Dict[str
     """
     Converts a single source dict into a structured startup dict.
 
-    TODO: replace this function body with an LLM extraction call, e.g.:
+    TODO: replace with an LLM extraction call:
         prompt = build_extraction_prompt(source, query)
         return llm_client.invoke(prompt)
     """
@@ -61,10 +68,8 @@ def _extract_startup_from_source(source: Dict[str, Any], query: str) -> Dict[str
         "name": _extract_name_from_title(title),
         "description": snippet or title,
         "sector": _infer_sector(full_text),
-        "technologies": _infer_technologies(full_text),
-        "url": source.get("url", ""),
-        "confidence": source.get("confidence", "low"),
-        "source_title": title,
+        "possible_ai_signals": _extract_ai_signals(full_text),
+        "sources": [{"title": title, "url": source.get("url", "")}],
     }
 
 
