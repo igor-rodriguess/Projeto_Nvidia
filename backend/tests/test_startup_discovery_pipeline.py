@@ -20,6 +20,9 @@ def test_pipeline_complete_with_langgraph(monkeypatch):
     assert result["search_terms"]
     assert result["sources"]
     assert result["startups"]
+    assert result["validated_startups"]
+    assert "evidence_validation" in result["startups"][0]
+    assert "ai_maturity" in result["startups"][0]
     assert result["errors"] == []
 
 
@@ -31,4 +34,5 @@ def test_pipeline_finishes_with_controlled_error_after_three_attempts(monkeypatc
     assert result["attempt_count"] == 3
     assert result["sources"] == []
     assert result["startups"] == []
+    assert result["validated_startups"] == []
     assert result["errors"]
