@@ -1,64 +1,38 @@
-from typing import List, Dict, Any
+from datetime import datetime, timezone
+from typing import Any, Dict, List
+
 from app.core.startup_analysis_state import StartupAnalysisState
 
-# ---------------------------------------------------------------------------
-# Mock data – simulates what a real search API (SerpAPI, Google CSE, etc.)
-# would return.  Replace _fetch_sources_for_term() with a real API call when
-# ready to integrate.
-# ---------------------------------------------------------------------------
 
-_MOCK_SOURCES_DB: Dict[str, List[Dict[str, Any]]] = {
-    "default": [
-        {
-            "title": "Startups brasileiras de tecnologia – panorama geral",
-            "url": "https://startse.com/artigos/startups-brasil",
-            "snippet": "Levantamento das principais startups de tecnologia no Brasil, com foco em IA e saúde digital.",
-            "source_type": "public_search",
-            "confidence": "low",
-        },
-        {
-            "title": "Ranking das startups de IA no Brasil | Exame",
-            "url": "https://exame.com/negocios/startups-ia-brasil",
-            "snippet": "Conheça as startups brasileiras que lideram o uso de inteligência artificial em diferentes setores.",
-            "source_type": "public_search",
-            "confidence": "low",
-        },
-        {
-            "title": "Ecossistema de inovação – startups.com.br",
-            "url": "https://startups.com.br/ecossistema",
-            "snippet": "Diretório completo de startups ativas no Brasil categorizadas por setor, estágio e tecnologia.",
-            "source_type": "directory",
-            "confidence": "low",
-        },
-    ]
-}
+DEFAULT_RESULTS_PER_TERM = 3
+MAX_TOTAL_SOURCES = 20
 
 
-def _fetch_sources_for_term(term: str) -> List[Dict[str, Any]]:
-    """
-    Returns mock sources for a given search term.
+def _search_duckduckgo(term: str, max_results: int) -> List[Dict[str, Any]]:
+    from ddgs import DDGS
 
-    TODO: replace this function body with a real API call, e.g.:
-        response = serpapi.search({"q": term, "engine": "google", ...})
-        return _parse_serpapi_response(response)
-    """
-    sources = []
-    for base in _MOCK_SOURCES_DB["default"]:
-        source = dict(base)
-        source["title"] = f"{base['title']} – {term}"
-        source["snippet"] = f"[Resultado para '{term}'] {base['snippet']}"
-        sources.append(source)
-    return sources
+    with DDGS() as ddgs:
+        return list(
+            ddgs.text(
+                term,
+                region="br-pt",
+                safesearch="moderate",
+                max_results=max_results,
+            )
+        )
+
+
+def _normalize_result(result: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "title": result.get("title", "").strip(),
+        "url": result.get("href", result.get("url", "")).strip(),
+        "snippet": result.get("body", result.get("snippet", "")).strip(),
+        "source_type": "public_search",
+        "collected_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 def source_collector_agent(state: StartupAnalysisState) -> StartupAnalysisState:
-    """
-    Executes the search strategy defined by search_planner_agent.
-    Collects public information from websites, news and directories.
-
-    Reads:  state["search_terms"]
-    Writes: state["sources"]
-    """
     search_terms: List[str] = state.get("search_terms", [])
 
     if not search_terms:
@@ -69,13 +43,29 @@ def source_collector_agent(state: StartupAnalysisState) -> StartupAnalysisState:
         return state
 
     collected: List[Dict[str, Any]] = []
-    seen_urls: set = set()
+    seen_urls: set[str] = set()
 
     for term in search_terms:
-        for source in _fetch_sources_for_term(term):
-            if source["url"] not in seen_urls:
-                seen_urls.add(source["url"])
-                collected.append(source)
+        try:
+            results = _search_duckduckgo(term, DEFAULT_RESULTS_PER_TERM)
+        except Exception as exc:
+            state.setdefault("errors", []).append(
+                f"source_collector_agent: failed to search '{term}': {exc}"
+            )
+            continue
+
+        for result in results:
+            source = _normalize_result(result)
+            url = source.get("url", "")
+            if not url or url in seen_urls:
+                continue
+
+            seen_urls.add(url)
+            collected.append(source)
+
+            if len(collected) >= MAX_TOTAL_SOURCES:
+                state["sources"] = collected
+                return state
 
     state["sources"] = collected
     return state

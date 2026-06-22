@@ -1,10 +1,10 @@
-from typing import TypedDict, List, Dict, Any
+from typing import Any, Dict, List, TypedDict
 
 
-class StartupAnalysisState(TypedDict):
+class StartupAnalysisState(TypedDict, total=False):
     query: str
     search_terms: List[str]
     sources: List[Dict[str, Any]]
     startups: List[Dict[str, Any]]
     attempt_count: int
-    errors: List[str]; 
+    errors: List[str]

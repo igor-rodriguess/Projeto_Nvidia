@@ -1,10 +1,8 @@
-from typing import List, Dict, Any
+import re
+from typing import Any, Dict, List
+
 from app.core.startup_analysis_state import StartupAnalysisState
 
-# ---------------------------------------------------------------------------
-# Keyword maps for keyword-based extraction (mock layer).
-# TODO: replace _extract_startup_from_source() with an LLM call via NIM API.
-# ---------------------------------------------------------------------------
 
 _SECTOR_KEYWORDS: Dict[str, List[str]] = {
     "healthtech": ["saúde", "health", "médico", "diagnóstico", "hospital", "clínica"],
@@ -16,50 +14,51 @@ _SECTOR_KEYWORDS: Dict[str, List[str]] = {
 }
 
 _AI_SIGNAL_KEYWORDS: List[str] = [
-    "ia",
+    "IA",
     "inteligência artificial",
     "machine learning",
-    "llm",
+    "LLM",
     "automação",
     "dados",
     "modelo",
-    "deep learning",
-    "nlp",
-    "visão computacional",
-    "generativa",
-    "robótica",
 ]
 
 
 def _infer_sector(text: str) -> str:
     lower = text.lower()
     for sector, keywords in _SECTOR_KEYWORDS.items():
-        if any(kw in lower for kw in keywords):
+        if any(keyword in lower for keyword in keywords):
             return sector
     return "tech"
 
 
 def _extract_ai_signals(text: str) -> List[str]:
     lower = text.lower()
-    return [kw for kw in _AI_SIGNAL_KEYWORDS if kw in lower]
+    signals = []
+
+    for keyword in _AI_SIGNAL_KEYWORDS:
+        normalized = keyword.lower()
+        if normalized == "ia":
+            if re.search(r"\bia\b", lower):
+                signals.append(keyword)
+            continue
+
+        if normalized in lower:
+            signals.append(keyword)
+
+    return signals
 
 
 def _extract_name_from_title(title: str) -> str:
-    for sep in (" – ", " | ", " - "):
-        if sep in title:
-            return title.split(sep)[0].strip()
+    for separator in (" – ", " | ", " - ", ":"):
+        if separator in title:
+            return title.split(separator)[0].strip()
+
     words = title.split()
     return " ".join(words[:4]) if len(words) >= 4 else title.strip()
 
 
 def _extract_startup_from_source(source: Dict[str, Any], query: str) -> Dict[str, Any]:
-    """
-    Converts a single source dict into a structured startup dict.
-
-    TODO: replace with an LLM extraction call:
-        prompt = build_extraction_prompt(source, query)
-        return llm_client.invoke(prompt)
-    """
     title = source.get("title", "")
     snippet = source.get("snippet", "")
     full_text = f"{title} {snippet} {query}"
@@ -74,12 +73,6 @@ def _extract_startup_from_source(source: Dict[str, Any], query: str) -> Dict[str
 
 
 def data_extractor_agent(state: StartupAnalysisState) -> StartupAnalysisState:
-    """
-    Converts unstructured collected sources into structured startup data.
-
-    Reads:  state["sources"], state["query"]
-    Writes: state["startups"]
-    """
     sources: List[Dict[str, Any]] = state.get("sources", [])
     query: str = state.get("query", "")
 
@@ -90,5 +83,7 @@ def data_extractor_agent(state: StartupAnalysisState) -> StartupAnalysisState:
         state["startups"] = []
         return state
 
-    state["startups"] = [_extract_startup_from_source(src, query) for src in sources]
+    state["startups"] = [
+        _extract_startup_from_source(source, query) for source in sources
+    ]
     return state
