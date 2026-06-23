@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.routes.rag_routes import router as rag_router
 from app.routes.startup_routes import router as startup_router
 
 app = FastAPI(
@@ -9,6 +10,7 @@ app = FastAPI(
 )
 
 app.include_router(startup_router)
+app.include_router(rag_router)
 
 
 @app.get("/health")
