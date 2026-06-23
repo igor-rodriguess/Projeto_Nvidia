@@ -3,6 +3,7 @@ from langgraph.graph import END, StateGraph
 from app.agents.ai_maturity_classifier_agent import ai_maturity_classifier_agent
 from app.agents.data_extractor_agent import data_extractor_agent
 from app.agents.evidence_validator_agent import evidence_validator_agent
+from app.agents.nvidia_rag_agent import nvidia_rag_agent
 from app.agents.search_planner_agent import search_planner_agent
 from app.agents.source_collector_agent import source_collector_agent
 from app.core.startup_analysis_state import StartupAnalysisState
@@ -25,6 +26,7 @@ def _controlled_error(state: StartupAnalysisState) -> StartupAnalysisState:
     state["sources"] = state.get("sources", [])
     state["startups"] = state.get("startups", [])
     state["validated_startups"] = state.get("validated_startups", [])
+    state["nvidia_recommendations"] = state.get("nvidia_recommendations", [])
     return state
 
 
@@ -36,6 +38,7 @@ def build_graph():
     graph.add_node("data_extractor", data_extractor_agent)
     graph.add_node("evidence_validator", evidence_validator_agent)
     graph.add_node("ai_maturity_classifier", ai_maturity_classifier_agent)
+    graph.add_node("nvidia_rag", nvidia_rag_agent)
     graph.add_node("controlled_error", _controlled_error)
 
     graph.set_entry_point("search_planner")
@@ -43,7 +46,8 @@ def build_graph():
     graph.add_conditional_edges("source_collector", _route_after_collection)
     graph.add_edge("data_extractor", "evidence_validator")
     graph.add_edge("evidence_validator", "ai_maturity_classifier")
-    graph.add_edge("ai_maturity_classifier", END)
+    graph.add_edge("ai_maturity_classifier", "nvidia_rag")
+    graph.add_edge("nvidia_rag", END)
     graph.add_edge("controlled_error", END)
 
     return graph.compile()

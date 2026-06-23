@@ -23,6 +23,7 @@ def test_pipeline_complete_with_langgraph(monkeypatch):
     assert result["validated_startups"]
     assert "evidence_validation" in result["startups"][0]
     assert "ai_maturity" in result["startups"][0]
+    assert result["nvidia_recommendations"]
     assert result["errors"] == []
 
 
@@ -35,4 +36,5 @@ def test_pipeline_finishes_with_controlled_error_after_three_attempts(monkeypatc
     assert result["sources"] == []
     assert result["startups"] == []
     assert result["validated_startups"] == []
+    assert result["nvidia_recommendations"] == []
     assert result["errors"]
