@@ -135,6 +135,11 @@ def _upsert_company(
             "name": startup.get("name", "Unknown startup"),
             "description": startup.get("description"),
             "sector": startup.get("sector"),
+            "website_url": startup.get("website_url"),
+            "country": startup.get("country"),
+            "city": startup.get("city"),
+            "state_region": startup.get("state_region"),
+            "founded_year": startup.get("founded_year"),
             "status": "validated"
             if startup.get("evidence_validation", {}).get("is_publicly_supported")
             else "discovered",

@@ -8,6 +8,7 @@ def _initial_state(query: str) -> StartupAnalysisState:
         "query": query,
         "search_terms": [],
         "sources": [],
+        "scrape_stats": {},
         "startups": [],
         "validated_startups": [],
         "nvidia_recommendations": [],

@@ -13,6 +13,9 @@ def test_search_planner_returns_required_search_variations():
     assert "healthtech IA Brasil machine learning" in search_terms
     assert "healthtech IA Brasil site:startups.com.br" in search_terms
     assert "healthtech IA Brasil site:exame.com startups" in search_terms
+    assert "healthtech IA Brasil site:cubo.network startups" in search_terms
+    assert "healthtech IA Brasil site:itau.com.br startups" in search_terms
+    assert "healthtech IA Brasil Cubo ItaÃº startups" in search_terms
 
 
 def test_search_planner_increments_attempt_count():

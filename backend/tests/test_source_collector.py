@@ -1,5 +1,5 @@
-from app.agents import source_collector_agent as collector_module
-from app.agents.source_collector_agent import source_collector_agent
+from app.scraping import source_collector as collector_module
+from app.scraping.source_collector import source_collector_agent
 from app.core.startup_analysis_state import StartupAnalysisState
 
 

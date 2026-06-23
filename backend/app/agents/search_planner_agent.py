@@ -7,6 +7,9 @@ _SEARCH_VARIATIONS = [
     "machine learning",
     "site:startups.com.br",
     "site:exame.com startups",
+    "site:cubo.network startups",
+    "site:itau.com.br startups",
+    "Cubo ItaÃº startups",
 ]
 
 

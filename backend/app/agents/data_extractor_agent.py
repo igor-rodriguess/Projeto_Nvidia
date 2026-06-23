@@ -61,14 +61,39 @@ def _extract_name_from_title(title: str) -> str:
 def _extract_startup_from_source(source: Dict[str, Any], query: str) -> Dict[str, Any]:
     title = source.get("title", "")
     snippet = source.get("snippet", "")
-    full_text = f"{title} {snippet} {query}"
+    page_title = source.get("page_title", "")
+    page_description = source.get("page_description", "")
+    page_text = source.get("page_text", "")
+    full_text = f"{title} {snippet} {page_title} {page_description} {page_text} {query}"
 
     return {
         "name": _extract_name_from_title(title),
-        "description": snippet or title,
+        "description": page_description or snippet or title,
         "sector": _infer_sector(full_text),
         "possible_ai_signals": _extract_ai_signals(full_text),
-        "sources": [{"title": title, "url": source.get("url", "")}],
+        "sources": [
+            {
+                "title": title,
+                "url": source.get("url", ""),
+                "snippet": snippet,
+                "page_title": page_title,
+                "page_description": page_description,
+                "page_text": page_text,
+                "page_text_excerpt": source.get("page_text_excerpt"),
+                "scrape_status": source.get("scrape_status"),
+                "scrape_error": source.get("scrape_error"),
+                "source_domain": source.get("source_domain"),
+                "final_url": source.get("final_url"),
+                "canonical_url": source.get("canonical_url"),
+                "http_status": source.get("http_status"),
+                "content_hash": source.get("content_hash"),
+                "text_char_count": source.get("text_char_count"),
+                "extraction_quality": source.get("extraction_quality"),
+                "source_type": source.get("source_type", "public_search"),
+                "collected_at": source.get("collected_at"),
+                "scraped_at": source.get("scraped_at"),
+            }
+        ],
     }
 
 

@@ -44,6 +44,11 @@ def _sample_pipeline_result():
                 "name": "DiagIA",
                 "description": "Startup usa IA em diagnóstico.",
                 "sector": "healthtech",
+                "country": "Brazil",
+                "state_region": "SP",
+                "city": "São Paulo",
+                "founded_year": 2021,
+                "website_url": "https://diagia.example.com",
                 "possible_ai_signals": ["IA"],
                 "sources": [
                     {

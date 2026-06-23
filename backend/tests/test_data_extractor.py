@@ -103,3 +103,26 @@ def test_data_extractor_empty_sources_returns_empty_startups():
 
     assert result["startups"] == []
     assert result["errors"]
+
+
+def test_data_extractor_uses_scraped_page_content_for_signals():
+    state: StartupAnalysisState = {
+        "query": "healthtech",
+        "sources": [
+            {
+                "title": "DiagIA - healthtech",
+                "url": "https://diagia.example.com",
+                "snippet": "Startup de saúde.",
+                "page_description": "Plataforma de diagnóstico médico.",
+                "page_text": "A empresa usa LLM, dados e modelo de machine learning em hospitais.",
+                "scrape_status": "success",
+            }
+        ],
+    }
+
+    result = data_extractor_agent(state)
+
+    signals = result["startups"][0]["possible_ai_signals"]
+    assert "LLM" in signals
+    assert "dados" in signals
+    assert "machine learning" in signals
