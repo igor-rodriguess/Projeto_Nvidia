@@ -7,6 +7,7 @@ class StartupAnalysisState(TypedDict, total=False):
     sources: List[Dict[str, Any]]
     scrape_stats: Dict[str, Any]
     startups: List[Dict[str, Any]]
+    deduplicated_companies: List[Dict[str, Any]]
     validated_startups: List[Dict[str, Any]]
     nvidia_recommendations: List[Dict[str, Any]]
     persistence: Dict[str, Any]
