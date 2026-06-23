@@ -11,7 +11,7 @@ def load_nvidia_documents(documents_dir: Path = DOCUMENTS_DIR) -> List[Any]:
     from langchain_core.documents import Document
 
     documents = []
-    for path in sorted(documents_dir.glob("*.md")):
+    for path in sorted(documents_dir.rglob("*.md")):
         content = path.read_text(encoding="utf-8")
         documents.append(
             Document(
