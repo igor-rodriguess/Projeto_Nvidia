@@ -4,7 +4,7 @@ from app.rag.ingestion import load_nvidia_documents, split_documents
 
 
 def test_load_nvidia_documents_reads_markdown_files():
-    documents = load_nvidia_documents()
+    documents = load_nvidia_documents(include_manual_documents=True)
 
     names = {document.metadata["document_name"] for document in documents}
     assert "nvidia_nim" in names
@@ -27,7 +27,11 @@ def test_load_nvidia_documents_adds_traceable_metadata(tmp_path: Path):
     document_path = tmp_path / "sample.md"
     document_path.write_text("# Sample\n\nConteudo NVIDIA.", encoding="utf-8")
 
-    documents = load_nvidia_documents(tmp_path)
+    documents = load_nvidia_documents(
+        tmp_path,
+        include_knowledge_base=False,
+        include_manual_documents=True,
+    )
 
     assert len(documents) == 1
     assert documents[0].metadata["source"] == str(document_path)

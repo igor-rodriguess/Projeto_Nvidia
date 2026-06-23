@@ -1,0 +1,380 @@
+{
+  "schema_version": "1.0",
+  "curation_policy": {
+    "goal": "Reduce hallucinations by storing small, source-linked recommendation facts instead of raw scraped pages.",
+    "rules": [
+      "Prefer official NVIDIA sources for product capabilities.",
+      "Use case materials only for strategic framing, not for NVIDIA product claims.",
+      "If a startup signal is weak or absent, the recommendation must say evidence is insufficient.",
+      "Every recommendation fact must carry at least one source_id.",
+      "Do not infer partnership, eligibility, pricing, availability, or production readiness unless the evidence explicitly supports it."
+    ]
+  },
+  "sources": {
+    "case_sequoia_ai_services": {
+      "title": "Sequoia - Services: The New Software",
+      "url": "https://sequoiacap.com/article/services-the-new-software/",
+      "source_type": "case_material"
+    },
+    "case_emergence_ai_native_services": {
+      "title": "Emergence Capital - The AI-Native Services Playbook",
+      "url": "https://www.emcap.com/thoughts/the-ai-native-services-playbook",
+      "source_type": "case_material"
+    },
+    "case_nvidia_ai_5_layer_cake": {
+      "title": "NVIDIA Blog - AI Is a 5-Layer Cake",
+      "url": "https://blogs.nvidia.com/blog/ai-5-layer-cake/",
+      "source_type": "case_material"
+    },
+    "nvidia_inception": {
+      "title": "NVIDIA Inception",
+      "url": "https://www.nvidia.com/en-us/startups/",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_nim": {
+      "title": "NVIDIA NIM",
+      "url": "https://www.nvidia.com/en-us/ai-data-science/products/nim-microservices/",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_api_catalog": {
+      "title": "NVIDIA API Catalog",
+      "url": "https://build.nvidia.com/",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_nemo": {
+      "title": "NVIDIA NeMo",
+      "url": "https://www.nvidia.com/en-us/ai-data-science/products/nemo/",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_nemo_guardrails": {
+      "title": "NVIDIA NeMo Guardrails",
+      "url": "https://github.com/NVIDIA-NeMo/Guardrails",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_triton": {
+      "title": "NVIDIA Dynamo-Triton / Triton Inference Server",
+      "url": "https://developer.nvidia.com/dynamo-triton",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_triton_docs": {
+      "title": "Triton Inference Server Docs",
+      "url": "https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_tensorrt_llm": {
+      "title": "NVIDIA TensorRT-LLM",
+      "url": "https://github.com/NVIDIA/TensorRT-LLM",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_rapids": {
+      "title": "NVIDIA RAPIDS",
+      "url": "https://rapids.ai/",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_cudf": {
+      "title": "RAPIDS cuDF",
+      "url": "https://docs.rapids.ai/api/cudf/stable/",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_cuml": {
+      "title": "RAPIDS cuML",
+      "url": "https://docs.rapids.ai/api/cuml/stable/",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_cuda": {
+      "title": "CUDA Toolkit",
+      "url": "https://developer.nvidia.com/cuda/toolkit",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_riva": {
+      "title": "NVIDIA Riva",
+      "url": "https://developer.nvidia.com/topics/ai/generative-ai/riva",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_omniverse": {
+      "title": "NVIDIA Omniverse",
+      "url": "https://www.nvidia.com/en-us/omniverse/",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_isaac": {
+      "title": "NVIDIA Isaac",
+      "url": "https://developer.nvidia.com/isaac",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_clara": {
+      "title": "NVIDIA Clara / Healthcare and Life Sciences",
+      "url": "https://www.nvidia.com/en-us/industries/healthcare-life-sciences/",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_morpheus": {
+      "title": "NVIDIA Morpheus",
+      "url": "https://developer.nvidia.com/morpheus-cybersecurity",
+      "source_type": "nvidia_official"
+    },
+    "nvidia_ai_enterprise": {
+      "title": "NVIDIA AI Enterprise",
+      "url": "https://www.nvidia.com/en-us/data-center/products/ai-enterprise/",
+      "source_type": "nvidia_official"
+    }
+  },
+  "frameworks": [
+    {
+      "id": "ai_native_services",
+      "name": "AI-native services",
+      "summary": "Use this frame when evaluating startups that turn service delivery into scalable software-like workflows with AI.",
+      "startup_signals": [
+        "Manual expert service is being converted into a repeatable AI-assisted workflow.",
+        "The product uses agents, copilots, automation, or proprietary data to reduce delivery cost.",
+        "The company can explain how AI changes margin, speed, quality, or scalability."
+      ],
+      "source_ids": ["case_sequoia_ai_services", "case_emergence_ai_native_services"]
+    },
+    {
+      "id": "ai_infrastructure_layers",
+      "name": "NVIDIA AI infrastructure layers",
+      "summary": "Use this frame to map a startup need to applications, models, infrastructure, chips, and energy constraints.",
+      "startup_signals": [
+        "The startup has a bottleneck beyond app UX, such as inference, model customization, data pipelines, or GPU operations.",
+        "The recommendation should distinguish model layer needs from serving, infrastructure, and accelerated computing needs."
+      ],
+      "source_ids": ["case_nvidia_ai_5_layer_cake"]
+    }
+  ],
+  "technologies": [
+    {
+      "id": "nvidia_inception",
+      "name": "NVIDIA Inception",
+      "category": "startup_program",
+      "what_it_is": "Program for startups in the NVIDIA ecosystem, relevant for technical resources, ecosystem access, visibility, and startup benefits.",
+      "recommend_when": [
+        "The company is a startup building with AI, data science, accelerated computing, robotics, healthcare, cybersecurity, simulation, or related NVIDIA-aligned domains.",
+        "The team needs ecosystem support, technical enablement, partner access, or go-to-market visibility."
+      ],
+      "do_not_overclaim": [
+        "Do not claim acceptance, eligibility, funding, credits, or specific benefits without direct evidence."
+      ],
+      "startup_signals": ["startup", "AI product", "GPU need", "go-to-market support", "ecosystem access"],
+      "maturity_fit": ["emerging", "applied", "advanced"],
+      "source_ids": ["nvidia_inception"]
+    },
+    {
+      "id": "nvidia_api_catalog",
+      "name": "NVIDIA API Catalog",
+      "category": "model_exploration",
+      "what_it_is": "Catalog for exploring and testing NVIDIA-hosted AI APIs and models before deeper integration.",
+      "recommend_when": [
+        "The startup is prototyping generative AI, multimodal, speech, vision, or agentic capabilities.",
+        "The team needs to compare model capabilities before deciding whether to self-host or deploy production infrastructure."
+      ],
+      "do_not_overclaim": [
+        "Do not treat API exploration as proof that the startup has production-grade deployment."
+      ],
+      "startup_signals": ["prototype", "MVP", "model evaluation", "API", "generative AI"],
+      "maturity_fit": ["emerging", "applied"],
+      "source_ids": ["nvidia_api_catalog"]
+    },
+    {
+      "id": "nvidia_nim",
+      "name": "NVIDIA NIM",
+      "category": "model_serving",
+      "what_it_is": "Microservices for deploying optimized AI models, including generative AI models, with an operational serving path.",
+      "recommend_when": [
+        "The startup needs to move AI models from experimentation to deployable inference services.",
+        "The product uses assistants, copilots, agents, multimodal models, or generative AI and needs lower operational friction."
+      ],
+      "do_not_overclaim": [
+        "Do not recommend NIM only because a startup mentions AI; require evidence of model serving, inference, or generative AI usage."
+      ],
+      "startup_signals": ["LLM", "inference", "generative AI", "copilot", "agent", "model deployment"],
+      "maturity_fit": ["applied", "advanced"],
+      "source_ids": ["nvidia_nim"]
+    },
+    {
+      "id": "nvidia_nemo",
+      "name": "NVIDIA NeMo",
+      "category": "model_customization",
+      "what_it_is": "Suite for developing, customizing, evaluating, and operating generative AI and agentic systems.",
+      "recommend_when": [
+        "The startup needs domain adaptation, customization, evaluation, or lifecycle tooling for generative AI.",
+        "The product depends on proprietary data, domain-specific assistants, voice, language, multimodal, or agent workflows."
+      ],
+      "do_not_overclaim": [
+        "Do not recommend NeMo as a generic chatbot tool unless there is evidence of model lifecycle or customization needs."
+      ],
+      "startup_signals": ["fine-tuning", "custom model", "agent", "domain data", "evaluation", "LLM lifecycle"],
+      "maturity_fit": ["applied", "advanced"],
+      "source_ids": ["nvidia_nemo"]
+    },
+    {
+      "id": "nemo_guardrails",
+      "name": "NeMo Guardrails",
+      "category": "ai_safety",
+      "what_it_is": "Toolkit for adding programmable guardrails to LLM-based conversational systems.",
+      "recommend_when": [
+        "The startup exposes assistants, copilots, chatbots, or agents to users.",
+        "The product needs topic control, policy enforcement, safer responses, or reduced off-scope behavior."
+      ],
+      "do_not_overclaim": [
+        "Guardrails reduce risk but do not guarantee legal compliance, factual accuracy, or total safety."
+      ],
+      "startup_signals": ["chatbot", "assistant", "copilot", "agent", "compliance", "regulated workflow"],
+      "maturity_fit": ["applied", "advanced"],
+      "source_ids": ["nvidia_nemo_guardrails"]
+    },
+    {
+      "id": "triton_inference_server",
+      "name": "NVIDIA Triton Inference Server",
+      "category": "production_inference",
+      "what_it_is": "Inference server for deploying and serving models across multiple frameworks in production environments.",
+      "recommend_when": [
+        "The startup serves multiple models or frameworks and needs a standardized inference layer.",
+        "The product needs scalable, observable, production-grade prediction APIs."
+      ],
+      "do_not_overclaim": [
+        "Do not recommend Triton for teams that only consume third-party APIs and do not operate their own models."
+      ],
+      "startup_signals": ["prediction API", "multiple models", "PyTorch", "ONNX", "TensorRT", "production inference"],
+      "maturity_fit": ["applied", "advanced"],
+      "source_ids": ["nvidia_triton", "nvidia_triton_docs"]
+    },
+    {
+      "id": "tensorrt_llm",
+      "name": "NVIDIA TensorRT-LLM",
+      "category": "llm_optimization",
+      "what_it_is": "Library for optimizing LLM inference on NVIDIA GPUs.",
+      "recommend_when": [
+        "The startup self-hosts or plans to self-host LLMs and has latency, throughput, or cost-per-token constraints.",
+        "The product has high-volume generative inference requirements."
+      ],
+      "do_not_overclaim": [
+        "Do not recommend TensorRT-LLM for basic API-only prototypes with no evidence of self-hosted LLM inference."
+      ],
+      "startup_signals": ["self-hosted LLM", "latency", "throughput", "cost per token", "GPU inference"],
+      "maturity_fit": ["advanced"],
+      "source_ids": ["nvidia_tensorrt_llm"]
+    },
+    {
+      "id": "rapids_cudf_cuml",
+      "name": "NVIDIA RAPIDS, cuDF, and cuML",
+      "category": "data_science_acceleration",
+      "what_it_is": "GPU-accelerated data science stack for dataframe processing and classical machine learning workflows.",
+      "recommend_when": [
+        "The startup has large tabular data pipelines, feature engineering, analytics, classical ML, or slow pandas/scikit-learn workflows.",
+        "The main bottleneck is data processing or traditional ML training, not only LLM prompting."
+      ],
+      "do_not_overclaim": [
+        "Do not recommend RAPIDS only because a startup uses data; require volume, latency, or compute bottleneck evidence."
+      ],
+      "startup_signals": ["pandas", "scikit-learn", "tabular data", "feature engineering", "fraud", "risk", "recommendation"],
+      "maturity_fit": ["emerging", "applied", "advanced"],
+      "source_ids": ["nvidia_rapids", "nvidia_cudf", "nvidia_cuml"]
+    },
+    {
+      "id": "cuda_toolkit",
+      "name": "CUDA Toolkit",
+      "category": "accelerated_computing_development",
+      "what_it_is": "Development toolkit for building GPU-accelerated applications.",
+      "recommend_when": [
+        "The startup develops custom high-performance workloads, simulation, numerical computing, computer vision, or low-level GPU acceleration.",
+        "The team has engineering capacity to optimize beyond high-level frameworks."
+      ],
+      "do_not_overclaim": [
+        "Do not recommend CUDA as the first step for business teams without evidence of custom GPU development needs."
+      ],
+      "startup_signals": ["GPU kernel", "simulation", "computer vision", "numerical computing", "high performance computing"],
+      "maturity_fit": ["advanced"],
+      "source_ids": ["nvidia_cuda"]
+    },
+    {
+      "id": "nvidia_riva",
+      "name": "NVIDIA Riva",
+      "category": "speech_ai",
+      "what_it_is": "Speech AI SDK for building real-time speech and language applications.",
+      "recommend_when": [
+        "The startup works with speech recognition, text-to-speech, real-time voice assistants, call centers, or voice agents."
+      ],
+      "do_not_overclaim": [
+        "Do not recommend Riva for generic text-only chatbots."
+      ],
+      "startup_signals": ["speech-to-text", "text-to-speech", "voice assistant", "call center", "audio"],
+      "maturity_fit": ["applied", "advanced"],
+      "source_ids": ["nvidia_riva"]
+    },
+    {
+      "id": "nvidia_omniverse",
+      "name": "NVIDIA Omniverse",
+      "category": "simulation_and_digital_twins",
+      "what_it_is": "Platform for simulation, digital twins, and connected 3D workflows.",
+      "recommend_when": [
+        "The startup builds digital twins, industrial simulation, 3D collaboration, robotics simulation, or physical-world design workflows."
+      ],
+      "do_not_overclaim": [
+        "Do not recommend Omniverse for ordinary dashboard or 2D SaaS products."
+      ],
+      "startup_signals": ["digital twin", "3D", "simulation", "industrial", "factory", "physical AI"],
+      "maturity_fit": ["applied", "advanced"],
+      "source_ids": ["nvidia_omniverse"]
+    },
+    {
+      "id": "nvidia_isaac",
+      "name": "NVIDIA Isaac",
+      "category": "robotics",
+      "what_it_is": "Platform and tooling for robotics development, simulation, and autonomous machines.",
+      "recommend_when": [
+        "The startup builds robots, autonomous systems, robotic perception, manipulation, AMRs, or robotics simulation."
+      ],
+      "do_not_overclaim": [
+        "Do not recommend Isaac for software-only workflow automation with no robotics component."
+      ],
+      "startup_signals": ["robot", "AMR", "manipulation", "autonomous machine", "robot simulation", "perception"],
+      "maturity_fit": ["applied", "advanced"],
+      "source_ids": ["nvidia_isaac"]
+    },
+    {
+      "id": "nvidia_clara",
+      "name": "NVIDIA Clara / Healthcare and Life Sciences",
+      "category": "healthcare_ai",
+      "what_it_is": "NVIDIA healthcare and life sciences ecosystem for accelerated computing and AI in medical and scientific workflows.",
+      "recommend_when": [
+        "The startup works in medical imaging, healthcare AI, hospitals, life sciences, drug discovery, or clinical workflows."
+      ],
+      "do_not_overclaim": [
+        "Do not imply regulatory approval or clinical validation without direct external evidence."
+      ],
+      "startup_signals": ["medical imaging", "hospital", "clinical", "drug discovery", "healthcare", "life sciences"],
+      "maturity_fit": ["emerging", "applied", "advanced"],
+      "source_ids": ["nvidia_clara"]
+    },
+    {
+      "id": "nvidia_morpheus",
+      "name": "NVIDIA Morpheus",
+      "category": "cybersecurity_ai",
+      "what_it_is": "AI framework for cybersecurity analytics and threat detection workflows.",
+      "recommend_when": [
+        "The startup analyzes security telemetry, logs, anomalies, SOC workflows, fraud signals, or threat detection at scale."
+      ],
+      "do_not_overclaim": [
+        "Do not recommend Morpheus for general IT management without cybersecurity or anomaly detection evidence."
+      ],
+      "startup_signals": ["cybersecurity", "SOC", "logs", "anomaly detection", "threat detection", "telemetry"],
+      "maturity_fit": ["applied", "advanced"],
+      "source_ids": ["nvidia_morpheus"]
+    },
+    {
+      "id": "nvidia_ai_enterprise",
+      "name": "NVIDIA AI Enterprise",
+      "category": "enterprise_ai_platform",
+      "what_it_is": "Enterprise software platform for developing and operating AI with support, security, and enterprise deployment considerations.",
+      "recommend_when": [
+        "The startup sells to enterprise, regulated, or hybrid-cloud customers that need supported AI software and production governance.",
+        "The deployment context requires stability, support, security, or standardized AI operations."
+      ],
+      "do_not_overclaim": [
+        "Do not recommend AI Enterprise only because the startup is B2B; require enterprise deployment or operational governance needs."
+      ],
+      "startup_signals": ["enterprise customer", "regulated sector", "hybrid cloud", "governance", "support", "production AI"],
+      "maturity_fit": ["applied", "advanced"],
+      "source_ids": ["nvidia_ai_enterprise"]
+    }
+  ]
+}

@@ -7,11 +7,30 @@ CHUNK_SIZE = 900
 CHUNK_OVERLAP = 120
 
 
-def load_nvidia_documents(documents_dir: Path = DOCUMENTS_DIR) -> List[Any]:
+def load_nvidia_documents(
+    documents_dir: Path = DOCUMENTS_DIR,
+    include_knowledge_base: bool = True,
+    include_manual_documents: bool = False,
+) -> List[Any]:
     from langchain_core.documents import Document
 
+    from app.rag.knowledge_base import build_technology_documents
+
     documents = []
-    for path in sorted(documents_dir.rglob("*.md")):
+
+    if include_knowledge_base:
+        documents.extend(
+            Document(
+                page_content=item["page_content"],
+                metadata=item["metadata"],
+            )
+            for item in build_technology_documents()
+        )
+
+    if not include_manual_documents:
+        return documents
+
+    for path in sorted(documents_dir.glob("*.md")):
         content = path.read_text(encoding="utf-8")
         documents.append(
             Document(
@@ -20,6 +39,7 @@ def load_nvidia_documents(documents_dir: Path = DOCUMENTS_DIR) -> List[Any]:
                     "source": str(path),
                     "document_name": path.stem,
                     "vendor": "NVIDIA",
+                    "curation": "manual_markdown",
                 },
             )
         )
