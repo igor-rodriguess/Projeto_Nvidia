@@ -16,9 +16,12 @@ def test_planejar_busca_ia_startup_generates_inception_plan_for_fintech():
     assert "Hipótese inicial" in plano["hipotese_maturidade"]
     assert "API-consumer" in plano["hipotese_maturidade"] or "AI-enabled" in plano["hipotese_maturidade"]
     assert len(plano["plano_consultas"]) >= 18
-    assert len(plano["tarefas"]) == len(plano["plano_consultas"])
+    assert len(plano["tarefas"]) == len(plano["plano_consultas"]) + 1
     assert len(plano["fontes_prioritarias"]) >= 3
     assert plano["fontes_prioritarias"][0]["fonte"] == "Site oficial"
+    assert plano["tarefas"][0]["tipo"] == "acesso_direto"
+    assert plano["tarefas"][0]["url"] == "https://clara.com.br"
+    assert plano["tarefas"][0]["extrator"] == "firecrawl"
 
 
 def test_planejar_busca_ia_startup_distributes_queries_across_seven_layers():
@@ -81,12 +84,12 @@ def test_planejar_busca_ia_startup_outputs_scraper_ready_tasks():
     }
 
     plano = planejar_busca_ia_startup(startup)
-    task = plano["tarefas"][0]
-    site_task = next(item for item in plano["tarefas"] if item["consulta"].startswith("site:"))
+    task = plano["tarefas"][1]
+    site_task = next(item for item in plano["tarefas"] if item.get("consulta", "").startswith("site:"))
 
     assert task["id"].startswith("task_camada_")
     assert task["tipo"] == "busca_web"
-    assert task["motor"] == "duckduckgo"
+    assert task["motor"] == "brave"
     assert task["camada"] == plano["plano_consultas"][0]["camada"]
     assert task["objetivo"] == plano["plano_consultas"][0]["objetivo"]
     assert site_task["tipo"] == "busca_site"

@@ -111,7 +111,7 @@ def planejar_busca_ia_startup(
         "site_oficial": site or None,
         "hipotese_maturidade": _gerar_hipotese_maturidade(categoria, descricao, contexto),
         "plano_consultas": plano_consultas,
-        "tarefas": _gerar_tarefas_scraper(plano_consultas),
+        "tarefas": _gerar_tarefas_site_oficial(site) + _gerar_tarefas_scraper(plano_consultas),
         "fontes_prioritarias": _gerar_fontes_prioritarias(nome, site),
         "observacoes": _gerar_observacoes(categoria, descricao, site),
     }
@@ -179,13 +179,30 @@ def _gerar_tarefas_scraper(plano_consultas: list[dict[str, Any]]) -> list[dict[s
                 "id": f"task_camada_{camada}_{index}",
                 "tipo": "busca_site" if item["consulta"].startswith("site:") else "busca_web",
                 "consulta": item["consulta"],
-                "motor": "duckduckgo",
+                "motor": "brave",
                 "max_resultados": 8 if camada in (3, 4) else 5,
                 "camada": camada,
                 "objetivo": item["objetivo"],
             }
         )
     return tarefas
+
+
+def _gerar_tarefas_site_oficial(site: str) -> list[dict[str, Any]]:
+    if not site:
+        return []
+    return [
+        {
+            "id": "task_site_oficial_1",
+            "tipo": "acesso_direto",
+            "url": site,
+            "extrator": "firecrawl",
+            "max_profundidade": 2,
+            "max_paginas_relacionadas": 6,
+            "camada": 6,
+            "objetivo": "Coletar conteúdo do site oficial e páginas internas relevantes para evidências de produto, tecnologia, cases, segurança e carreiras.",
+        }
+    ]
 
 
 def _camada_1(nome: str) -> list[dict[str, Any]]:
