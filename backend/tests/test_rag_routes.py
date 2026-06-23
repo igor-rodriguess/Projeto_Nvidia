@@ -12,7 +12,9 @@ def test_rag_health_returns_curated_base_status():
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "ok"
+    assert payload["retrieval_mode"] in {"curated_local", "qdrant"}
     assert payload["technologies"] >= 15
+    assert "qdrant" in payload
     assert payload["validation_errors"] == []
 
 

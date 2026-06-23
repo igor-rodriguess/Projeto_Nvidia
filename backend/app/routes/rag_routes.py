@@ -1,3 +1,4 @@
+import os
 from typing import Any, Dict, List
 
 from fastapi import APIRouter
@@ -10,6 +11,7 @@ from app.rag.knowledge_base import (
     load_knowledge_base,
     validate_knowledge_base,
 )
+from app.rag.vector_store import DEFAULT_COLLECTION_NAME, get_qdrant_client
 
 
 router = APIRouter(prefix="/rag", tags=["rag"])
@@ -30,14 +32,21 @@ def rag_health():
     documents = load_nvidia_documents()
     chunks = split_documents(documents)
     validation_errors = validate_knowledge_base()
+    qdrant_status = _qdrant_status()
 
     return {
         "status": "ok" if not validation_errors else "invalid",
+        "retrieval_mode": (
+            "qdrant"
+            if os.getenv("NVIDIA_RAG_USE_QDRANT", "false").lower() == "true"
+            else "curated_local"
+        ),
         "sources": len(knowledge_base["sources"]),
         "frameworks": len(knowledge_base["frameworks"]),
         "technologies": len(knowledge_base["technologies"]),
         "documents": len(build_technology_documents()),
         "chunks": len(chunks),
+        "qdrant": qdrant_status,
         "validation_errors": validation_errors,
     }
 
@@ -54,3 +63,21 @@ def recommend_nvidia_technologies(payload: StartupRagRequest):
         "nvidia_recommendations": result["nvidia_recommendations"],
         "errors": result.get("errors", []),
     }
+
+
+def _qdrant_status() -> Dict[str, Any]:
+    try:
+        client = get_qdrant_client()
+        info = client.get_collection(DEFAULT_COLLECTION_NAME)
+        return {
+            "available": True,
+            "collection": DEFAULT_COLLECTION_NAME,
+            "points_count": info.points_count,
+            "status": str(info.status),
+        }
+    except Exception as exc:
+        return {
+            "available": False,
+            "collection": DEFAULT_COLLECTION_NAME,
+            "error": str(exc),
+        }
