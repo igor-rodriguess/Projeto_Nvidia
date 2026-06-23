@@ -1,0 +1,393 @@
+{
+  "metadados": {
+    "fonte_url": "https://cubo.itau/startups-portfolio",
+    "data_scraping": "2026-06-23",
+    "versao_limpeza": "1.0",
+    "total_bruto": 10,
+    "total_valido": 10,
+    "total_incompletas": 0,
+    "registros_removidos": []
+  },
+  "startups": [
+    {
+      "nome": "Clara Pagamentos",
+      "cidade": null,
+      "estado": null,
+      "pais": "Brasil",
+      "categoria": "Financeiro",
+      "descricao_curta": "A Clara é uma plataforma de gestão de gastos corporativos que centraliza cartões, pagamentos, reembolsos e conciliação em tempo real. Com automação, controle por regras e integração com ERPs, ajuda empresas a ganhar eficiência, visibilidade financeira e governança.",
+      "site": "https://clara.com.br",
+      "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1721669754176-rl78x70m.png",
+      "link_perfil_cubo": "https://cubo.itau/startups-portfolio/clara-pagamentos",
+      "raw": {
+        "nome": "Clara Pagamentos",
+        "site": "https://clara.com.br",
+        "cidade": null,
+        "estado": null,
+        "pais": "Brasil",
+        "categoria": "Financeiro",
+        "descricao_curta": "A Clara é uma plataforma de gestão de gastos corporativos que centraliza cartões, pagamentos, reembolsos e conciliação em tempo real. Com automação, controle por regras e integração com ERPs, ajuda empresas a ganhar eficiência, visibilidade financeira e governança.",
+        "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1721669754176-rl78x70m.png",
+        "link_perfil_cubo": "https://cubo.itau/startups-portfolio/clara-pagamentos",
+        "fonte": "Cubo Itaú - Vitrine de Startups",
+        "coletado_em": "2026-06-23T20:41:35.618573+00:00"
+      },
+      "qualidade": {
+        "score": 0.8333,
+        "completude": "4/6",
+        "completude_percentual": 0.6667,
+        "incompleto": false,
+        "baixa_qualidade": false,
+        "componentes": {
+          "completude_peso_0_5": 0.3333,
+          "site_valido_peso_0_2": 0.2,
+          "cidade_estado_consistente_peso_0_2": 0.2,
+          "normalizacao_sem_conflitos_peso_0_1": 0.1
+        },
+        "alertas": []
+      }
+    },
+    {
+      "nome": "Leggal",
+      "cidade": null,
+      "estado": null,
+      "pais": "Brasil",
+      "categoria": "Recursos Humanos",
+      "descricao_curta": "Problemas jurídicos são a 3ª maior causa de estresse entre colaboradores, afetando performance e aumentando o risco de burnout. A Leggal nasce para preencher essa lacuna: somos o primeiro benefício de Cuidado Jurídico do Brasil, oferecendo às empresas um diferencial real no bem-estar..",
+      "site": "https://www.leggal.com.br/",
+      "logo_url": "https://media.licdn.com/dms/image/v2/D4D0BAQFusKf-axtS5w/company-logo_200_200/company-logo_200_200/0/1701269747961?e=1773878400&v=beta&t=0LBG2NRqVW7EhtTM34WzOcYK7Z3WIsg9bxYsr_3MroY",
+      "link_perfil_cubo": "https://cubo.itau/startups-portfolio/leggal",
+      "raw": {
+        "nome": "Leggal",
+        "site": "https://www.leggal.com.br/",
+        "cidade": null,
+        "estado": null,
+        "pais": "Brasil",
+        "categoria": "Recursos Humanos",
+        "descricao_curta": "Problemas jurídicos são a 3ª maior causa de estresse entre colaboradores, afetando performance e aumentando o risco de burnout. A Leggal nasce para preencher essa lacuna: somos o primeiro benefício de Cuidado Jurídico do Brasil, oferecendo às empresas um diferencial real no bem-estar..",
+        "logo_url": "https://media.licdn.com/dms/image/v2/D4D0BAQFusKf-axtS5w/company-logo_200_200/company-logo_200_200/0/1701269747961?e=1773878400&v=beta&t=0LBG2NRqVW7EhtTM34WzOcYK7Z3WIsg9bxYsr_3MroY",
+        "link_perfil_cubo": "https://cubo.itau/startups-portfolio/leggal",
+        "fonte": "Cubo Itaú - Vitrine de Startups",
+        "coletado_em": "2026-06-23T20:41:38.602132+00:00"
+      },
+      "qualidade": {
+        "score": 0.8333,
+        "completude": "4/6",
+        "completude_percentual": 0.6667,
+        "incompleto": false,
+        "baixa_qualidade": false,
+        "componentes": {
+          "completude_peso_0_5": 0.3333,
+          "site_valido_peso_0_2": 0.2,
+          "cidade_estado_consistente_peso_0_2": 0.2,
+          "normalizacao_sem_conflitos_peso_0_1": 0.1
+        },
+        "alertas": []
+      }
+    },
+    {
+      "nome": "AutoU",
+      "cidade": null,
+      "estado": null,
+      "pais": "Brasil",
+      "categoria": "Produtividade",
+      "descricao_curta": "A AutoU é uma plataforma de Inteligência Artificial aplicada ao mundo corporativo, criando soluções digitais para grandes empresas. Atendemos grupos globais como L’Oréal, Nestlé, Jaguar, Stellantis e Saint-Gobain, gerando mais de R$50MM em resultados para 150.000+ usuários em 15+ países.",
+      "site": "https://autou.io",
+      "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1702665059047-q0zc3uqf.png",
+      "link_perfil_cubo": "https://cubo.itau/startups-portfolio/autou",
+      "raw": {
+        "nome": "AutoU",
+        "site": "https://autou.io",
+        "cidade": null,
+        "estado": null,
+        "pais": "Brasil",
+        "categoria": "Produtividade",
+        "descricao_curta": "A AutoU é uma plataforma de Inteligência Artificial aplicada ao mundo corporativo, criando soluções digitais para grandes empresas. Atendemos grupos globais como L’Oréal, Nestlé, Jaguar, Stellantis e Saint-Gobain, gerando mais de R$50MM em resultados para 150.000+ usuários em 15+ países.",
+        "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1702665059047-q0zc3uqf.png",
+        "link_perfil_cubo": "https://cubo.itau/startups-portfolio/autou",
+        "fonte": "Cubo Itaú - Vitrine de Startups",
+        "coletado_em": "2026-06-23T20:41:41.853826+00:00"
+      },
+      "qualidade": {
+        "score": 0.8333,
+        "completude": "4/6",
+        "completude_percentual": 0.6667,
+        "incompleto": false,
+        "baixa_qualidade": false,
+        "componentes": {
+          "completude_peso_0_5": 0.3333,
+          "site_valido_peso_0_2": 0.2,
+          "cidade_estado_consistente_peso_0_2": 0.2,
+          "normalizacao_sem_conflitos_peso_0_1": 0.1
+        },
+        "alertas": []
+      }
+    },
+    {
+      "nome": "Voltta",
+      "cidade": null,
+      "estado": null,
+      "pais": "Brasil",
+      "categoria": "Energia",
+      "descricao_curta": "A VOLTTA é uma EnergyTech brasileira que integra tecnologia, operação e experiência digital para comercializar energia e gerir infraestrutura de recarga de veículos elétricos, operando rede de carregadores e soluções SaaS para parceiros e clientes.",
+      "site": "https://voltta.com.br/",
+      "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1637592306247-jktadm7w.jpg",
+      "link_perfil_cubo": "https://cubo.itau/startups-portfolio/voltta",
+      "raw": {
+        "nome": "Voltta",
+        "site": "https://voltta.com.br/",
+        "cidade": null,
+        "estado": null,
+        "pais": "Brasil",
+        "categoria": "Energia",
+        "descricao_curta": "A VOLTTA é uma EnergyTech brasileira que integra tecnologia, operação e experiência digital para comercializar energia e gerir infraestrutura de recarga de veículos elétricos, operando rede de carregadores e soluções SaaS para parceiros e clientes.",
+        "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1637592306247-jktadm7w.jpg",
+        "link_perfil_cubo": "https://cubo.itau/startups-portfolio/voltta",
+        "fonte": "Cubo Itaú - Vitrine de Startups",
+        "coletado_em": "2026-06-23T20:41:45.638004+00:00"
+      },
+      "qualidade": {
+        "score": 0.8333,
+        "completude": "4/6",
+        "completude_percentual": 0.6667,
+        "incompleto": false,
+        "baixa_qualidade": false,
+        "componentes": {
+          "completude_peso_0_5": 0.3333,
+          "site_valido_peso_0_2": 0.2,
+          "cidade_estado_consistente_peso_0_2": 0.2,
+          "normalizacao_sem_conflitos_peso_0_1": 0.1
+        },
+        "alertas": []
+      }
+    },
+    {
+      "nome": "Talent Academy",
+      "cidade": null,
+      "estado": null,
+      "pais": "Brasil",
+      "categoria": "Recursos Humanos",
+      "descricao_curta": "A Talent Academy é uma HR Tech focada em desenvolver pessoas e fortalecer a cultura organizacional. Combina tecnologia, people analytics e uma rede de talent experts para apoiar empresas nos principais desafios relacionados a desenvolvimento de times, performance e cultura organizacional.",
+      "site": "https://talentacademy.com.br/",
+      "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1648578040321-kknfl548.png",
+      "link_perfil_cubo": "https://cubo.itau/startups-portfolio/talent-academy",
+      "raw": {
+        "nome": "Talent Academy",
+        "site": "https://talentacademy.com.br/",
+        "cidade": null,
+        "estado": null,
+        "pais": "Brasil",
+        "categoria": "Recursos Humanos",
+        "descricao_curta": "A Talent Academy é uma HR Tech focada em desenvolver pessoas e fortalecer a cultura organizacional. Combina tecnologia, people analytics e uma rede de talent experts para apoiar empresas nos principais desafios relacionados a desenvolvimento de times, performance e cultura organizacional.",
+        "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1648578040321-kknfl548.png",
+        "link_perfil_cubo": "https://cubo.itau/startups-portfolio/talent-academy",
+        "fonte": "Cubo Itaú - Vitrine de Startups",
+        "coletado_em": "2026-06-23T20:41:48.727023+00:00"
+      },
+      "qualidade": {
+        "score": 0.8333,
+        "completude": "4/6",
+        "completude_percentual": 0.6667,
+        "incompleto": false,
+        "baixa_qualidade": false,
+        "componentes": {
+          "completude_peso_0_5": 0.3333,
+          "site_valido_peso_0_2": 0.2,
+          "cidade_estado_consistente_peso_0_2": 0.2,
+          "normalizacao_sem_conflitos_peso_0_1": 0.1
+        },
+        "alertas": []
+      }
+    },
+    {
+      "nome": "Biti9",
+      "cidade": null,
+      "estado": null,
+      "pais": "Não Possuo Operação Em Países Latam",
+      "categoria": "Produtividade",
+      "descricao_curta": "A Biti9 é uma consultoria e integradora de tecnologia especializada em Hiperautomação (RPA + IA) e Transformação Digital para médias e grandes empresas. O foco central é eliminar ineficiências operacionais, convertendo processos manuais e repetitivos em fluxos de trabalho inteligentes e escaláveis",
+      "site": "https://www.biti9.com.br",
+      "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1708095213459-do0ry7i7.png",
+      "link_perfil_cubo": "https://cubo.itau/startups-portfolio/biti9",
+      "raw": {
+        "nome": "Biti9",
+        "site": "https://www.biti9.com.br",
+        "cidade": null,
+        "estado": null,
+        "pais": "Não possuo operação em países LATAM",
+        "categoria": "Produtividade",
+        "descricao_curta": "A Biti9 é uma consultoria e integradora de tecnologia especializada em Hiperautomação (RPA + IA) e Transformação Digital para médias e grandes empresas. O foco central é eliminar ineficiências operacionais, convertendo processos manuais e repetitivos em fluxos de trabalho inteligentes e escaláveis",
+        "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1708095213459-do0ry7i7.png",
+        "link_perfil_cubo": "https://cubo.itau/startups-portfolio/biti9",
+        "fonte": "Cubo Itaú - Vitrine de Startups",
+        "coletado_em": "2026-06-23T20:41:51.852423+00:00"
+      },
+      "qualidade": {
+        "score": 0.8333,
+        "completude": "4/6",
+        "completude_percentual": 0.6667,
+        "incompleto": false,
+        "baixa_qualidade": false,
+        "componentes": {
+          "completude_peso_0_5": 0.3333,
+          "site_valido_peso_0_2": 0.2,
+          "cidade_estado_consistente_peso_0_2": 0.2,
+          "normalizacao_sem_conflitos_peso_0_1": 0.1
+        },
+        "alertas": []
+      }
+    },
+    {
+      "nome": "Marvin",
+      "cidade": null,
+      "estado": null,
+      "pais": "Brasil",
+      "categoria": "Agricultura E Pecuária",
+      "descricao_curta": "Impulsionando o futuro do comércio global Infraestrutura de cadeia de suprimentos nativa de IA, criada para reduzir riscos, aumentar a confiança e desbloquear o acesso ao mercado em um cenário de comércio global em rápida transformação.",
+      "site": "https://www.marvinblue.earth/",
+      "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1727206324904-mi6jeg1e.png",
+      "link_perfil_cubo": "https://cubo.itau/startups-portfolio/marvin",
+      "raw": {
+        "nome": "Marvin",
+        "site": "https://www.marvinblue.earth/",
+        "cidade": null,
+        "estado": null,
+        "pais": "Brasil",
+        "categoria": "Agricultura e Pecuária",
+        "descricao_curta": "Impulsionando o futuro do comércio global Infraestrutura de cadeia de suprimentos nativa de IA, criada para reduzir riscos, aumentar a confiança e desbloquear o acesso ao mercado em um cenário de comércio global em rápida transformação.",
+        "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1727206324904-mi6jeg1e.png",
+        "link_perfil_cubo": "https://cubo.itau/startups-portfolio/marvin",
+        "fonte": "Cubo Itaú - Vitrine de Startups",
+        "coletado_em": "2026-06-23T20:41:54.964985+00:00"
+      },
+      "qualidade": {
+        "score": 0.8333,
+        "completude": "4/6",
+        "completude_percentual": 0.6667,
+        "incompleto": false,
+        "baixa_qualidade": false,
+        "componentes": {
+          "completude_peso_0_5": 0.3333,
+          "site_valido_peso_0_2": 0.2,
+          "cidade_estado_consistente_peso_0_2": 0.2,
+          "normalizacao_sem_conflitos_peso_0_1": 0.1
+        },
+        "alertas": []
+      }
+    },
+    {
+      "nome": "Woba",
+      "cidade": null,
+      "estado": null,
+      "pais": "Brasil",
+      "categoria": "Construção Civil",
+      "descricao_curta": "Woba é a forma mais inteligente de contratar e administrar escritórios. A solução e tecnologia Woba permite que grandes empresas controlem os seus espaços de trabalho em uma única plataforma, sem custos escondidos. Muito mais eficiência, flexibilidade e centralização.",
+      "site": "http://www.woba.com.br",
+      "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1668801769193-awnpnd02.png",
+      "link_perfil_cubo": "https://cubo.itau/startups-portfolio/woba",
+      "raw": {
+        "nome": "Woba",
+        "site": "http://www.woba.com.br",
+        "cidade": null,
+        "estado": null,
+        "pais": "Brasil",
+        "categoria": "Construção Civil",
+        "descricao_curta": "Woba é a forma mais inteligente de contratar e administrar escritórios. A solução e tecnologia Woba permite que grandes empresas controlem os seus espaços de trabalho em uma única plataforma, sem custos escondidos. Muito mais eficiência, flexibilidade e centralização.",
+        "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1668801769193-awnpnd02.png",
+        "link_perfil_cubo": "https://cubo.itau/startups-portfolio/woba",
+        "fonte": "Cubo Itaú - Vitrine de Startups",
+        "coletado_em": "2026-06-23T20:41:58.193035+00:00"
+      },
+      "qualidade": {
+        "score": 0.8333,
+        "completude": "4/6",
+        "completude_percentual": 0.6667,
+        "incompleto": false,
+        "baixa_qualidade": false,
+        "componentes": {
+          "completude_peso_0_5": 0.3333,
+          "site_valido_peso_0_2": 0.2,
+          "cidade_estado_consistente_peso_0_2": 0.2,
+          "normalizacao_sem_conflitos_peso_0_1": 0.1
+        },
+        "alertas": []
+      }
+    },
+    {
+      "nome": "Anzi Finance",
+      "cidade": null,
+      "estado": null,
+      "pais": "Colômbia",
+      "categoria": "Financeiro",
+      "descricao_curta": "Anzi provides credit risk mitigation infrastructure, operating guarantees on its own or third-party balance and first-loss pools via multisig wallets. It supports real-world assets as counter-collateral. Blockchain adds traceability, automatic reconciliations, and live monitoring.",
+      "site": "https://www.anzi.finance/",
+      "logo_url": "https://cubo-workspace-prod-api-assets.s3.us-east-1.amazonaws.com/collaborators/c6194bac-74df-47b3-a7ba-b477e1420a45/d72a5f1aa612918cfb9cda35b29435c4b07a025dee419e54907b058fcb0ee603.png",
+      "link_perfil_cubo": "https://cubo.itau/startups-portfolio/anzi-finance",
+      "raw": {
+        "nome": "Anzi Finance",
+        "site": "https://www.anzi.finance/",
+        "cidade": null,
+        "estado": null,
+        "pais": "Colômbia",
+        "categoria": "Financeiro",
+        "descricao_curta": "Anzi provides credit risk mitigation infrastructure, operating guarantees on its own or third-party balance and first-loss pools via multisig wallets. It supports real-world assets as counter-collateral. Blockchain adds traceability, automatic reconciliations, and live monitoring.",
+        "logo_url": "https://cubo-workspace-prod-api-assets.s3.us-east-1.amazonaws.com/collaborators/c6194bac-74df-47b3-a7ba-b477e1420a45/d72a5f1aa612918cfb9cda35b29435c4b07a025dee419e54907b058fcb0ee603.png",
+        "link_perfil_cubo": "https://cubo.itau/startups-portfolio/anzi-finance",
+        "fonte": "Cubo Itaú - Vitrine de Startups",
+        "coletado_em": "2026-06-23T20:42:01.471908+00:00"
+      },
+      "qualidade": {
+        "score": 0.8333,
+        "completude": "4/6",
+        "completude_percentual": 0.6667,
+        "incompleto": false,
+        "baixa_qualidade": false,
+        "componentes": {
+          "completude_peso_0_5": 0.3333,
+          "site_valido_peso_0_2": 0.2,
+          "cidade_estado_consistente_peso_0_2": 0.2,
+          "normalizacao_sem_conflitos_peso_0_1": 0.1
+        },
+        "alertas": []
+      }
+    },
+    {
+      "nome": "Kinzbio",
+      "cidade": null,
+      "estado": null,
+      "pais": "Brasil",
+      "categoria": "Biotecnologia",
+      "descricao_curta": "Kinzbio is developing biotechnologies for the treatment of bacterial infections. Allowing to capture phages thriving in nature and turn them into precision tools to treat patients suffering from infections. Kinzbio has been cleared by the Ministry in Uruguay, and successfully treated humans.",
+      "site": "http://kinzbio.com",
+      "logo_url": "https://media.licdn.com/dms/image/v2/C4D0BAQGnIlyErzmTIg/company-logo_200_200/company-logo_200_200/0/1645117841909/kinzbio_logo?e=1740614400&v=beta&t=sOSAyMjqUMajQ1wH_TNp3HsDLF297QpjfdV_zUlYmeA",
+      "link_perfil_cubo": "https://cubo.itau/startups-portfolio/kinzbio",
+      "raw": {
+        "nome": "Kinzbio",
+        "site": "http://kinzbio.com",
+        "cidade": null,
+        "estado": null,
+        "pais": "Brasil",
+        "categoria": "Biotecnologia",
+        "descricao_curta": "Kinzbio is developing biotechnologies for the treatment of bacterial infections. Allowing to capture phages thriving in nature and turn them into precision tools to treat patients suffering from infections. Kinzbio has been cleared by the Ministry in Uruguay, and successfully treated humans.",
+        "logo_url": "https://media.licdn.com/dms/image/v2/C4D0BAQGnIlyErzmTIg/company-logo_200_200/company-logo_200_200/0/1645117841909/kinzbio_logo?e=1740614400&v=beta&t=sOSAyMjqUMajQ1wH_TNp3HsDLF297QpjfdV_zUlYmeA",
+        "link_perfil_cubo": "https://cubo.itau/startups-portfolio/kinzbio",
+        "fonte": "Cubo Itaú - Vitrine de Startups",
+        "coletado_em": "2026-06-23T20:42:04.591224+00:00"
+      },
+      "qualidade": {
+        "score": 0.8333,
+        "completude": "4/6",
+        "completude_percentual": 0.6667,
+        "incompleto": false,
+        "baixa_qualidade": false,
+        "componentes": {
+          "completude_peso_0_5": 0.3333,
+          "site_valido_peso_0_2": 0.2,
+          "cidade_estado_consistente_peso_0_2": 0.2,
+          "normalizacao_sem_conflitos_peso_0_1": 0.1
+        },
+        "alertas": []
+      }
+    }
+  ]
+}

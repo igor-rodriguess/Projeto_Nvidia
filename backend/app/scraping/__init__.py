@@ -1,5 +1,13 @@
-from app.scraping.page_scraper import page_scraper_agent
-from app.scraping.source_collector import source_collector_agent
+from app.scraping.cubo_portfolio_scraper import (
+    StartupCubo,
+    calcular_score_relevancia_ia,
+    coletar_startups_cubo,
+    scrape_cubo_startups_portfolio,
+)
 
-
-__all__ = ["page_scraper_agent", "source_collector_agent"]
+__all__ = [
+    "StartupCubo",
+    "calcular_score_relevancia_ia",
+    "coletar_startups_cubo",
+    "scrape_cubo_startups_portfolio",
+]
