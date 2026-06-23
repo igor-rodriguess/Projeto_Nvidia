@@ -1,4 +1,5 @@
 from app.agents import source_collector_agent as collector_module
+from app.db import startup_repository
 from app.services.startup_search_pipeline import run_startup_discovery_pipeline
 
 
@@ -13,6 +14,11 @@ def test_pipeline_complete_with_langgraph(monkeypatch):
         ]
 
     monkeypatch.setattr(collector_module, "_search_duckduckgo", fake_search)
+    monkeypatch.setattr(
+        startup_repository,
+        "persist_startup_discovery_result",
+        lambda result: {"enabled": False, "saved": False},
+    )
 
     result = run_startup_discovery_pipeline("healthtech IA Brasil")
 
@@ -24,11 +30,17 @@ def test_pipeline_complete_with_langgraph(monkeypatch):
     assert "evidence_validation" in result["startups"][0]
     assert "ai_maturity" in result["startups"][0]
     assert result["nvidia_recommendations"]
+    assert result["persistence"]["saved"] is False
     assert result["errors"] == []
 
 
 def test_pipeline_finishes_with_controlled_error_after_three_attempts(monkeypatch):
     monkeypatch.setattr(collector_module, "_search_duckduckgo", lambda term, max_results: [])
+    monkeypatch.setattr(
+        startup_repository,
+        "persist_startup_discovery_result",
+        lambda result: {"enabled": False, "saved": False},
+    )
 
     result = run_startup_discovery_pipeline("consulta sem resultados")
 

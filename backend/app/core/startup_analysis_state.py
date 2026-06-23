@@ -8,5 +8,6 @@ class StartupAnalysisState(TypedDict, total=False):
     startups: List[Dict[str, Any]]
     validated_startups: List[Dict[str, Any]]
     nvidia_recommendations: List[Dict[str, Any]]
+    persistence: Dict[str, Any]
     attempt_count: int
     errors: List[str]

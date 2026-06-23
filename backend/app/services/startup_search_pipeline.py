@@ -1,4 +1,5 @@
 from app.core.startup_analysis_state import StartupAnalysisState
+from app.db.startup_repository import persist_startup_discovery_result
 from app.graph.startup_discovery_graph import startup_discovery_graph
 
 
@@ -10,13 +11,16 @@ def _initial_state(query: str) -> StartupAnalysisState:
         "startups": [],
         "validated_startups": [],
         "nvidia_recommendations": [],
+        "persistence": {},
         "attempt_count": 0,
         "errors": [],
     }
 
 
 def run_startup_discovery_pipeline(query: str) -> StartupAnalysisState:
-    return startup_discovery_graph.invoke(_initial_state(query))
+    result = startup_discovery_graph.invoke(_initial_state(query))
+    result["persistence"] = persist_startup_discovery_result(result)
+    return result
 
 
 class StartupSearchPipeline:
