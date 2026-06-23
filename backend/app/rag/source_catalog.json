@@ -1,0 +1,174 @@
+{
+  "case_materials": [
+    {
+      "name": "Sequoia - AI services",
+      "url": "https://sequoiacap.com/article/services-the-new-software/",
+      "source_type": "case_material",
+      "format": "article",
+      "priority": "high"
+    },
+    {
+      "name": "Emergence Capital - AI-native services playbook",
+      "url": "https://www.emcap.com/thoughts/the-ai-native-services-playbook",
+      "source_type": "case_material",
+      "format": "article",
+      "priority": "high"
+    },
+    {
+      "name": "NVIDIA AI 5-layer cake",
+      "url": "https://blogs.nvidia.com/blog/ai-5-layer-cake/",
+      "source_type": "case_material",
+      "format": "article",
+      "priority": "high"
+    },
+    {
+      "name": "Playlist de tecnologias NVIDIA",
+      "url": "https://www.youtube.com/playlist?list=PLBaUJRFQ-j_WJZdZfFNsgUWDWF1Ldjp_X",
+      "source_type": "case_material",
+      "format": "youtube_playlist",
+      "priority": "medium"
+    },
+    {
+      "name": "Comunidade startups NVIDIA",
+      "url": "https://www.youtube.com/watch?v=NmZDQSdUVUQ",
+      "source_type": "case_material",
+      "format": "youtube_video",
+      "priority": "medium"
+    },
+    {
+      "name": "Beneficios Inception",
+      "url": "https://www.youtube.com/live/fWfkE6cibwQ",
+      "source_type": "case_material",
+      "format": "youtube_video",
+      "priority": "medium"
+    }
+  ],
+  "nvidia_official_docs": [
+    {
+      "name": "NVIDIA Inception",
+      "url": "https://www.nvidia.com/en-us/startups/",
+      "source_type": "nvidia_official",
+      "format": "product_page",
+      "priority": "high"
+    },
+    {
+      "name": "NVIDIA NIM",
+      "url": "https://www.nvidia.com/en-us/ai-data-science/products/nim-microservices/",
+      "source_type": "nvidia_official",
+      "format": "product_page",
+      "priority": "high"
+    },
+    {
+      "name": "NVIDIA API Catalog",
+      "url": "https://build.nvidia.com/",
+      "source_type": "nvidia_official",
+      "format": "developer_catalog",
+      "priority": "high"
+    },
+    {
+      "name": "NVIDIA NeMo",
+      "url": "https://www.nvidia.com/en-us/ai-data-science/products/nemo/",
+      "source_type": "nvidia_official",
+      "format": "product_page",
+      "priority": "high"
+    },
+    {
+      "name": "NeMo Guardrails",
+      "url": "https://github.com/NVIDIA-NeMo/Guardrails",
+      "source_type": "nvidia_official",
+      "format": "github_repository",
+      "priority": "high"
+    },
+    {
+      "name": "NVIDIA Triton Inference Server",
+      "url": "https://developer.nvidia.com/dynamo-triton",
+      "source_type": "nvidia_official",
+      "format": "developer_page",
+      "priority": "high"
+    },
+    {
+      "name": "Triton docs",
+      "url": "https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/",
+      "source_type": "nvidia_official",
+      "format": "documentation",
+      "priority": "high"
+    },
+    {
+      "name": "TensorRT-LLM",
+      "url": "https://github.com/NVIDIA/TensorRT-LLM",
+      "source_type": "nvidia_official",
+      "format": "github_repository",
+      "priority": "high"
+    },
+    {
+      "name": "NVIDIA RAPIDS",
+      "url": "https://rapids.ai/",
+      "source_type": "nvidia_official",
+      "format": "product_page",
+      "priority": "high"
+    },
+    {
+      "name": "cuDF",
+      "url": "https://docs.rapids.ai/api/cudf/stable/",
+      "source_type": "nvidia_official",
+      "format": "documentation",
+      "priority": "medium"
+    },
+    {
+      "name": "cuML",
+      "url": "https://docs.rapids.ai/api/cuml/stable/",
+      "source_type": "nvidia_official",
+      "format": "documentation",
+      "priority": "medium"
+    },
+    {
+      "name": "CUDA Toolkit",
+      "url": "https://developer.nvidia.com/cuda/toolkit",
+      "source_type": "nvidia_official",
+      "format": "developer_page",
+      "priority": "medium"
+    },
+    {
+      "name": "NVIDIA Riva",
+      "url": "https://developer.nvidia.com/topics/ai/generative-ai/riva",
+      "source_type": "nvidia_official",
+      "format": "developer_page",
+      "priority": "medium"
+    },
+    {
+      "name": "NVIDIA Omniverse",
+      "url": "https://www.nvidia.com/en-us/omniverse/",
+      "source_type": "nvidia_official",
+      "format": "product_page",
+      "priority": "medium"
+    },
+    {
+      "name": "NVIDIA Isaac",
+      "url": "https://developer.nvidia.com/isaac",
+      "source_type": "nvidia_official",
+      "format": "developer_page",
+      "priority": "medium"
+    },
+    {
+      "name": "NVIDIA Clara",
+      "url": "https://www.nvidia.com/en-us/industries/healthcare-life-sciences/",
+      "source_type": "nvidia_official",
+      "format": "product_page",
+      "priority": "medium"
+    },
+    {
+      "name": "NVIDIA Morpheus",
+      "url": "https://developer.nvidia.com/morpheus-cybersecurity",
+      "source_type": "nvidia_official",
+      "format": "developer_page",
+      "priority": "medium"
+    },
+    {
+      "name": "NVIDIA AI Enterprise",
+      "url": "https://www.nvidia.com/en-us/data-center/products/ai-enterprise/",
+      "source_type": "nvidia_official",
+      "format": "product_page",
+      "priority": "high"
+    }
+  ]
+}
