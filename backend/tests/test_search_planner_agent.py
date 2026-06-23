@@ -16,6 +16,7 @@ def test_planejar_busca_ia_startup_generates_inception_plan_for_fintech():
     assert "Hipótese inicial" in plano["hipotese_maturidade"]
     assert "API-consumer" in plano["hipotese_maturidade"] or "AI-enabled" in plano["hipotese_maturidade"]
     assert len(plano["plano_consultas"]) >= 18
+    assert len(plano["tarefas"]) == len(plano["plano_consultas"])
     assert len(plano["fontes_prioritarias"]) >= 3
     assert plano["fontes_prioritarias"][0]["fonte"] == "Site oficial"
 
@@ -69,6 +70,27 @@ def test_planejar_busca_ia_startup_includes_english_queries():
     assert any("fine-tuning" in query for query in queries)
     assert any("technical report" in query for query in queries)
     assert any("site:deeprisk.example" in query for query in queries)
+
+
+def test_planejar_busca_ia_startup_outputs_scraper_ready_tasks():
+    startup = {
+        "nome": "DeepRisk",
+        "site": "https://deeprisk.example",
+        "categoria": "Fintech",
+        "descricao_curta": "Motor de risco com dados transacionais.",
+    }
+
+    plano = planejar_busca_ia_startup(startup)
+    task = plano["tarefas"][0]
+    site_task = next(item for item in plano["tarefas"] if item["consulta"].startswith("site:"))
+
+    assert task["id"].startswith("task_camada_")
+    assert task["tipo"] == "busca_web"
+    assert task["motor"] == "duckduckgo"
+    assert task["camada"] == plano["plano_consultas"][0]["camada"]
+    assert task["objetivo"] == plano["plano_consultas"][0]["objetivo"]
+    assert site_task["tipo"] == "busca_site"
+    assert all(item["max_resultados"] == 8 for item in plano["tarefas"] if item["camada"] in (3, 4))
 
 
 def test_planejar_busca_ia_startup_does_not_require_site():

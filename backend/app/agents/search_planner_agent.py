@@ -104,11 +104,14 @@ def planejar_busca_ia_startup(
     categoria = _clean(startup.get("categoria"))
     descricao = _clean(startup.get("descricao_curta"))
     site = _clean(startup.get("site_oficial") or startup.get("site"))
+    plano_consultas = _gerar_plano_consultas(nome, categoria, site)
 
     return {
         "startup": nome,
+        "site_oficial": site or None,
         "hipotese_maturidade": _gerar_hipotese_maturidade(categoria, descricao, contexto),
-        "plano_consultas": _gerar_plano_consultas(nome, categoria, site),
+        "plano_consultas": plano_consultas,
+        "tarefas": _gerar_tarefas_scraper(plano_consultas),
         "fontes_prioritarias": _gerar_fontes_prioritarias(nome, site),
         "observacoes": _gerar_observacoes(categoria, descricao, site),
     }
@@ -165,6 +168,24 @@ def _gerar_plano_consultas(nome: str, categoria: str, site: str) -> list[dict[st
     consultas.extend(_camada_7(nome))
 
     return _dedupe_consultas(consultas)
+
+
+def _gerar_tarefas_scraper(plano_consultas: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    tarefas = []
+    for index, item in enumerate(plano_consultas, start=1):
+        camada = item["camada"]
+        tarefas.append(
+            {
+                "id": f"task_camada_{camada}_{index}",
+                "tipo": "busca_site" if item["consulta"].startswith("site:") else "busca_web",
+                "consulta": item["consulta"],
+                "motor": "duckduckgo",
+                "max_resultados": 8 if camada in (3, 4) else 5,
+                "camada": camada,
+                "objetivo": item["objetivo"],
+            }
+        )
+    return tarefas
 
 
 def _camada_1(nome: str) -> list[dict[str, Any]]:
