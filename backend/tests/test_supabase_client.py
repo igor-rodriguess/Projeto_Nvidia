@@ -2,6 +2,7 @@ from app.db.supabase_client import SupabaseConfig
 
 
 def test_supabase_config_returns_none_without_env(monkeypatch):
+    monkeypatch.setattr("app.db.supabase_client.load_dotenv", lambda: None)
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
 
@@ -9,6 +10,7 @@ def test_supabase_config_returns_none_without_env(monkeypatch):
 
 
 def test_supabase_config_reads_env(monkeypatch):
+    monkeypatch.setattr("app.db.supabase_client.load_dotenv", lambda: None)
     monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co/")
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "service-role")
 

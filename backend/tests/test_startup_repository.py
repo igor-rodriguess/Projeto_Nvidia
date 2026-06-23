@@ -120,8 +120,10 @@ def test_persist_startup_discovery_result_saves_pipeline_entities():
 
 
 def test_persist_startup_discovery_result_is_disabled_without_client(monkeypatch):
+    monkeypatch.setattr("app.db.supabase_client.load_dotenv", lambda: None)
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    monkeypatch.delenv("SUPABASE_SECRET_KEY", raising=False)
 
     result = persist_startup_discovery_result(_sample_pipeline_result())
 

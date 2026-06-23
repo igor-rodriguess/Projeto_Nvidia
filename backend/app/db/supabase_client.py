@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 
 import httpx
+from dotenv import load_dotenv
 
 
 @dataclass(frozen=True)
@@ -12,8 +13,12 @@ class SupabaseConfig:
 
     @classmethod
     def from_env(cls) -> "SupabaseConfig | None":
+        load_dotenv()
         url = os.getenv("SUPABASE_URL", "").rstrip("/")
-        service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+        service_role_key = (
+            os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+            or os.getenv("SUPABASE_SECRET_KEY", "")
+        )
 
         if not url or not service_role_key:
             return None

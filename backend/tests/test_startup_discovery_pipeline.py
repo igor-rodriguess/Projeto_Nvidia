@@ -1,5 +1,5 @@
 from app.agents import source_collector_agent as collector_module
-from app.db import startup_repository
+from app.services import startup_search_pipeline
 from app.services.startup_search_pipeline import run_startup_discovery_pipeline
 
 
@@ -15,7 +15,7 @@ def test_pipeline_complete_with_langgraph(monkeypatch):
 
     monkeypatch.setattr(collector_module, "_search_duckduckgo", fake_search)
     monkeypatch.setattr(
-        startup_repository,
+        startup_search_pipeline,
         "persist_startup_discovery_result",
         lambda result: {"enabled": False, "saved": False},
     )
@@ -37,7 +37,7 @@ def test_pipeline_complete_with_langgraph(monkeypatch):
 def test_pipeline_finishes_with_controlled_error_after_three_attempts(monkeypatch):
     monkeypatch.setattr(collector_module, "_search_duckduckgo", lambda term, max_results: [])
     monkeypatch.setattr(
-        startup_repository,
+        startup_search_pipeline,
         "persist_startup_discovery_result",
         lambda result: {"enabled": False, "saved": False},
     )
