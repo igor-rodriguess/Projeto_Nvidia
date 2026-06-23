@@ -49,6 +49,7 @@ def test_pipeline_complete_with_langgraph(monkeypatch):
     assert result["sources"]
     assert result["scrape_stats"]["scraped"] >= 1
     assert result["startups"]
+    assert result["deduplicated_companies"]
     assert result["validated_startups"]
     assert "evidence_validation" in result["startups"][0]
     assert "ai_maturity" in result["startups"][0]

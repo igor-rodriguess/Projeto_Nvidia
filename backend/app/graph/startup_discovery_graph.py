@@ -5,6 +5,7 @@ from app.agents.company_profile_enrichment_agent import (
     company_profile_enrichment_agent,
 )
 from app.agents.data_extractor_agent import data_extractor_agent
+from app.agents.deduplication_agent import deduplication_agent
 from app.agents.evidence_validator_agent import evidence_validator_agent
 from app.agents.nvidia_rag_agent import nvidia_rag_agent
 from app.agents.search_planner_agent import search_planner_agent
@@ -29,6 +30,7 @@ def _controlled_error(state: StartupAnalysisState) -> StartupAnalysisState:
     )
     state["sources"] = state.get("sources", [])
     state["startups"] = state.get("startups", [])
+    state["deduplicated_companies"] = state.get("deduplicated_companies", [])
     state["validated_startups"] = state.get("validated_startups", [])
     state["nvidia_recommendations"] = state.get("nvidia_recommendations", [])
     return state
@@ -41,6 +43,7 @@ def build_graph():
     graph.add_node("source_collector", source_collector_agent)
     graph.add_node("page_scraper", page_scraper_agent)
     graph.add_node("data_extractor", data_extractor_agent)
+    graph.add_node("deduplication", deduplication_agent)
     graph.add_node("company_profile_enrichment", company_profile_enrichment_agent)
     graph.add_node("evidence_validator", evidence_validator_agent)
     graph.add_node("ai_maturity_classifier", ai_maturity_classifier_agent)
@@ -51,7 +54,8 @@ def build_graph():
     graph.add_edge("search_planner", "source_collector")
     graph.add_conditional_edges("source_collector", _route_after_collection)
     graph.add_edge("page_scraper", "data_extractor")
-    graph.add_edge("data_extractor", "company_profile_enrichment")
+    graph.add_edge("data_extractor", "deduplication")
+    graph.add_edge("deduplication", "company_profile_enrichment")
     graph.add_edge("company_profile_enrichment", "evidence_validator")
     graph.add_edge("evidence_validator", "ai_maturity_classifier")
     graph.add_edge("ai_maturity_classifier", "nvidia_rag")

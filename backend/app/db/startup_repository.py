@@ -26,8 +26,9 @@ def persist_startup_discovery_result(
             result.get("nvidia_recommendations", [])
         )
 
+        companies_to_persist = _companies_to_persist(result)
         saved_companies = []
-        for startup in result.get("startups", []):
+        for startup in companies_to_persist:
             company = _upsert_company(supabase, startup)
             company_id = company["id"]
             saved_companies.append(company_id)
@@ -69,6 +70,10 @@ def persist_startup_discovery_result(
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _companies_to_persist(result: StartupAnalysisState) -> List[Dict[str, Any]]:
+    return result.get("startups", [])
 
 
 def _save_discovery_run(
