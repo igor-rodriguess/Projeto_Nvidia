@@ -179,7 +179,7 @@ def _gerar_tarefas_scraper(plano_consultas: list[dict[str, Any]]) -> list[dict[s
                 "id": f"task_camada_{camada}_{index}",
                 "tipo": "busca_site" if item["consulta"].startswith("site:") else "busca_web",
                 "consulta": item["consulta"],
-                "motor": "brave",
+                "motor": "searxng",
                 "max_resultados": 8 if camada in (3, 4) else 5,
                 "camada": camada,
                 "objetivo": item["objetivo"],

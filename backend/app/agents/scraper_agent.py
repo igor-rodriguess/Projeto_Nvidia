@@ -13,6 +13,16 @@ import feedparser
 import requests
 
 try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - covered by runtime environment
+    load_dotenv = None
+
+try:
+    from ddgs import DDGS
+except ImportError:  # pragma: no cover - covered by runtime environment
+    DDGS = None
+
+try:
     import trafilatura
 except ImportError:  # pragma: no cover - covered by runtime environment
     trafilatura = None
@@ -20,8 +30,12 @@ except ImportError:  # pragma: no cover - covered by runtime environment
 
 LOGGER = logging.getLogger(__name__)
 
-BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
-FIRECRAWL_SCRAPE_URL = "https://api.firecrawl.dev/v1/scrape"
+FIRECRAWL_SCRAPE_URL = "https://api.firecrawl.dev/v2/scrape"
+FIRECRAWL_SEARCH_URL = "https://api.firecrawl.dev/v2/search"
+SEARXNG_DEFAULT_BASE_URL = "http://localhost:8080"
+
+if load_dotenv is not None:
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -63,47 +77,47 @@ COMPLEMENTARY_SOURCES = [
 ]
 
 
-class BraveSearchClient:
+class SearXNGSearchClient:
     def __init__(
         self,
         session: requests.Session,
-        api_key: str | None = None,
+        base_url: str | None = None,
         delay_seconds: float = 1.0,
         timeout: int = 10,
     ) -> None:
         self.session = session
-        self.api_key = api_key or os.getenv("BRAVE_SEARCH_API_KEY")
+        self.base_url = (base_url or os.getenv("SEARXNG_BASE_URL") or SEARXNG_DEFAULT_BASE_URL).rstrip("/")
         self.delay_seconds = delay_seconds
         self.timeout = timeout
         self._last_request_at = 0.0
+        self.provider_name = "searxng"
 
     def search(self, query: str, count: int) -> list[dict[str, Any]]:
-        if not self.api_key:
-            raise ValueError("BRAVE_SEARCH_API_KEY não configurada")
-
         self._wait()
         response = self.session.get(
-            BRAVE_SEARCH_URL,
-            params={"q": query, "count": count},
-            headers={
-                "Accept": "application/json",
-                "x-subscription-token": self.api_key,
-                "User-Agent": USER_AGENT,
+            f"{self.base_url}/search",
+            params={
+                "q": query,
+                "format": "json",
+                "categories": "general",
+                "language": "pt-BR",
             },
+            headers={"Accept": "application/json", "User-Agent": USER_AGENT},
             timeout=self.timeout,
         )
         response.raise_for_status()
         payload = response.json()
         results = []
 
-        for item in payload.get("web", {}).get("results", []):
-            snippet = _clean(item.get("description"))
+        for item in payload.get("results", [])[:count]:
+            snippet = _clean(item.get("content"))
             results.append(
                 {
                     "titulo": _clean(item.get("title")),
                     "url": _clean(item.get("url")),
                     "snippet": snippet,
                     "potencial_alto": _has_tech_terms(snippet),
+                    "provedor_busca": self.provider_name,
                 }
             )
 
@@ -116,6 +130,152 @@ class BraveSearchClient:
         if elapsed < self.delay_seconds:
             time.sleep(self.delay_seconds - elapsed)
         self._last_request_at = time.perf_counter()
+
+
+class DDGSSearchClient:
+    def __init__(self, delay_seconds: float = 1.0) -> None:
+        self.delay_seconds = delay_seconds
+        self._last_request_at = 0.0
+        self.provider_name = "ddgs"
+
+    def search(self, query: str, count: int) -> list[dict[str, Any]]:
+        if DDGS is None:
+            raise ValueError("Dependência ddgs não instalada")
+
+        self._wait()
+        results = []
+        with DDGS() as client:
+            for item in client.text(query, max_results=count):
+                snippet = _clean(item.get("body"))
+                results.append(
+                    {
+                        "titulo": _clean(item.get("title")),
+                        "url": _clean(item.get("href")),
+                        "snippet": snippet,
+                        "potencial_alto": _has_tech_terms(snippet),
+                        "provedor_busca": self.provider_name,
+                    }
+                )
+        return [item for item in results if item["titulo"] and item["url"]]
+
+    def _wait(self) -> None:
+        if self.delay_seconds <= 0:
+            return
+        elapsed = time.perf_counter() - self._last_request_at
+        if elapsed < self.delay_seconds:
+            time.sleep(self.delay_seconds - elapsed)
+        self._last_request_at = time.perf_counter()
+
+
+class FirecrawlSearchClient:
+    def __init__(
+        self,
+        session: requests.Session,
+        api_key: str | None = None,
+        delay_seconds: float = 2.0,
+        timeout: int = 30,
+    ) -> None:
+        self.session = session
+        self.api_key = api_key or os.getenv("FIRECRAWL_API_KEY")
+        self.delay_seconds = delay_seconds
+        self.timeout = timeout
+        self._last_request_at = 0.0
+        self.provider_name = "firecrawl"
+
+    def search(self, query: str, count: int) -> list[dict[str, Any]]:
+        if not self.api_key:
+            raise ValueError("FIRECRAWL_API_KEY não configurada")
+
+        self._wait()
+        response = self.session.post(
+            FIRECRAWL_SEARCH_URL,
+            json={
+                "query": query,
+                "sources": ["web"],
+                "categories": [],
+                "limit": count,
+                "scrapeOptions": {
+                    "onlyMainContent": True,
+                    "maxAge": 172800000,
+                    "formats": [],
+                },
+            },
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                "User-Agent": USER_AGENT,
+            },
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        raw_results = payload.get("data") or payload.get("results") or []
+        results = []
+
+        for item in raw_results[:count]:
+            snippet = _clean(item.get("description") or item.get("snippet") or item.get("markdown"))
+            results.append(
+                {
+                    "titulo": _clean(item.get("title")),
+                    "url": _clean(item.get("url")),
+                    "snippet": snippet,
+                    "potencial_alto": _has_tech_terms(snippet),
+                    "provedor_busca": self.provider_name,
+                }
+            )
+
+        return [item for item in results if item["titulo"] and item["url"]]
+
+    def _wait(self) -> None:
+        if self.delay_seconds <= 0:
+            return
+        elapsed = time.perf_counter() - self._last_request_at
+        if elapsed < self.delay_seconds:
+            time.sleep(self.delay_seconds - elapsed)
+        self._last_request_at = time.perf_counter()
+
+
+class SearchProviderRouter:
+    def __init__(
+        self,
+        session: requests.Session,
+        provider: str | None = None,
+        delay_seconds: float = 1.0,
+        timeout: int = 10,
+    ) -> None:
+        self.provider = (provider or os.getenv("SEARCH_PROVIDER") or "searxng").lower()
+        self.clients = self._build_clients(session, delay_seconds, timeout)
+
+    def search(self, query: str, count: int) -> list[dict[str, Any]]:
+        errors = []
+        for client in self.clients:
+            try:
+                results = client.search(query, count)
+                if results:
+                    return results
+                errors.append(f"{client.provider_name}: sem resultados")
+            except (requests.RequestException, ValueError) as exc:
+                errors.append(f"{client.provider_name}: {exc}")
+                LOGGER.warning("Provedor de busca falhou (%s): %s", client.provider_name, exc)
+        raise ValueError("Nenhum provedor de busca disponível. Erros: " + " | ".join(errors))
+
+    def _build_clients(
+        self,
+        session: requests.Session,
+        delay_seconds: float,
+        timeout: int,
+    ) -> list[Any]:
+        searxng = SearXNGSearchClient(session, delay_seconds=delay_seconds, timeout=timeout)
+        ddgs = DDGSSearchClient(delay_seconds=delay_seconds)
+        firecrawl = FirecrawlSearchClient(session, delay_seconds=delay_seconds, timeout=timeout)
+
+        if self.provider == "ddgs":
+            return [ddgs, searxng, firecrawl]
+        if self.provider == "firecrawl":
+            return [firecrawl, searxng, ddgs]
+        if self.provider == "all":
+            return [searxng, ddgs, firecrawl]
+        return [searxng, ddgs, firecrawl]
 
 
 class FirecrawlClient:
@@ -131,6 +291,7 @@ class FirecrawlClient:
         self.delay_seconds = delay_seconds
         self.timeout = timeout
         self._last_request_at = 0.0
+        self.provider_name = "firecrawl"
 
     def scrape(self, url: str) -> dict[str, Any]:
         if not self.api_key:
@@ -155,7 +316,7 @@ class FirecrawlClient:
         return {
             "url": _clean(metadata.get("sourceURL") or metadata.get("url") or url),
             "titulo_pagina": _clean(metadata.get("title")),
-            "conteudo_markdown": _clean(data.get("markdown")),
+            "conteudo_markdown": _clean(data.get("markdown") or data.get("content")),
             "metadados": metadata,
             "extrator": "firecrawl",
         }
@@ -173,6 +334,7 @@ class TrafilaturaExtractor:
     def __init__(self, session: requests.Session, timeout: int = 10) -> None:
         self.session = session
         self.timeout = timeout
+        self.provider_name = "trafilatura"
 
     def extract(self, url: str) -> dict[str, Any]:
         if trafilatura is None:
@@ -207,18 +369,18 @@ class ScraperAgent:
     def __init__(
         self,
         session: requests.Session | None = None,
-        brave_client: BraveSearchClient | None = None,
+        search_client: Any | None = None,
         firecrawl_client: FirecrawlClient | None = None,
         trafilatura_extractor: TrafilaturaExtractor | None = None,
         timeout: int = 10,
-        brave_delay_seconds: float = 1.0,
+        search_delay_seconds: float = 1.0,
         firecrawl_delay_seconds: float = 2.0,
     ) -> None:
         self.session = session or requests.Session()
         self.timeout = timeout
-        self.brave = brave_client or BraveSearchClient(
+        self.search_client = search_client or SearchProviderRouter(
             self.session,
-            delay_seconds=brave_delay_seconds,
+            delay_seconds=search_delay_seconds,
             timeout=timeout,
         )
         self.firecrawl = firecrawl_client or FirecrawlClient(
@@ -285,7 +447,7 @@ class ScraperAgent:
             if tipo == "feed_rss":
                 return self._executar_feed_rss(tarefa), []
             if tipo == "api_get":
-                return _resultado_base(tarefa), [_erro(tarefa, tarefa.get("url"), "api_get não é suportado nesta versão; use Brave, Firecrawl, trafilatura ou feed_rss")]
+                return _resultado_base(tarefa), [_erro(tarefa, tarefa.get("url"), "api_get não é suportado nesta versão; use SearXNG, DDGS, Firecrawl, trafilatura ou feed_rss")]
             raise ValueError(f"Tipo de tarefa não suportado: {tipo}")
         except (requests.RequestException, ValueError) as exc:
             return _resultado_base(tarefa), [_erro(tarefa, tarefa.get("url"), str(exc))]
@@ -293,17 +455,17 @@ class ScraperAgent:
     def _executar_busca_web(self, tarefa: dict[str, Any]) -> dict[str, Any]:
         consulta = _clean(tarefa.get("consulta"))
         max_resultados = int(tarefa.get("max_resultados") or 10)
-        search_results = self.brave.search(consulta, max_resultados)
+        search_results = self.search_client.search(consulta, max_resultados)
         full_pages = []
 
         for item in search_results:
             if not item["potencial_alto"] or len(full_pages) >= 3:
                 continue
             try:
-                page = self.firecrawl.scrape(item["url"])
+                page = self._extrair_pagina(item["url"], preferred_extractor="firecrawl")
                 full_pages.append(page)
             except (requests.RequestException, ValueError) as exc:
-                LOGGER.warning("Firecrawl falhou para %s: %s", item["url"], exc)
+                LOGGER.warning("Extração falhou para %s: %s", item["url"], exc)
 
         return {
             **_resultado_base(tarefa),
@@ -315,12 +477,7 @@ class ScraperAgent:
     def _executar_acesso_direto(self, tarefa: dict[str, Any]) -> dict[str, Any]:
         url = _clean(tarefa.get("url"))
         extractor = _clean(tarefa.get("extrator") or "firecrawl").lower()
-        if extractor == "firecrawl":
-            page = self.firecrawl.scrape(url)
-        elif extractor == "trafilatura":
-            page = self.trafilatura.extract(url)
-        else:
-            raise ValueError(f"Extrator não suportado: {extractor}")
+        page = self._extrair_pagina(url, preferred_extractor=extractor)
 
         return {
             **_resultado_base(tarefa),
@@ -365,7 +522,7 @@ class ScraperAgent:
         for source in COMPLEMENTARY_SOURCES:
             consulta = f'"{startup}" (IA OR "inteligência artificial" OR "machine learning") site:{source}'
             try:
-                results = self.brave.search(consulta, 5)
+                results = self.search_client.search(consulta, 5)
             except (requests.RequestException, ValueError) as exc:
                 results = []
                 errors.append({"task_id": "varredura_complementar", "url": source, "erro": str(exc)})
@@ -378,24 +535,36 @@ class ScraperAgent:
             )
         return output, errors
 
+    def _extrair_pagina(self, url: str, preferred_extractor: str = "firecrawl") -> dict[str, Any]:
+        if preferred_extractor == "trafilatura":
+            return self.trafilatura.extract(url)
+        if preferred_extractor != "firecrawl":
+            raise ValueError(f"Extrator não suportado: {preferred_extractor}")
+
+        try:
+            return self.firecrawl.scrape(url)
+        except (requests.RequestException, ValueError) as exc:
+            LOGGER.warning("Firecrawl indisponível para %s; tentando trafilatura: %s", url, exc)
+            return self.trafilatura.extract(url)
+
 
 def executar_scraper_agent(
     plano: dict[str, Any],
     session: requests.Session | None = None,
     delay_seconds: float | None = None,
     respect_robots: bool | None = None,
-    brave_client: BraveSearchClient | None = None,
+    search_client: Any | None = None,
     firecrawl_client: FirecrawlClient | None = None,
     trafilatura_extractor: TrafilaturaExtractor | None = None,
 ) -> dict[str, Any]:
-    brave_delay = 1.0 if delay_seconds is None else delay_seconds
+    search_delay = 1.0 if delay_seconds is None else delay_seconds
     firecrawl_delay = 2.0 if delay_seconds is None else delay_seconds
     return ScraperAgent(
         session=session,
-        brave_client=brave_client,
+        search_client=search_client,
         firecrawl_client=firecrawl_client,
         trafilatura_extractor=trafilatura_extractor,
-        brave_delay_seconds=brave_delay,
+        search_delay_seconds=search_delay,
         firecrawl_delay_seconds=firecrawl_delay,
     ).executar(plano)
 
@@ -422,7 +591,7 @@ def _normalizar_tarefas(plano: dict[str, Any]) -> list[dict[str, Any]]:
                 "id": f"task_{index}",
                 "tipo": "busca_web",
                 "consulta": item["consulta"],
-                "motor": "brave",
+                "motor": "searxng",
                 "max_resultados": item.get("max_resultados", 10),
                 "camada": item.get("camada"),
                 "objetivo": item.get("objetivo"),

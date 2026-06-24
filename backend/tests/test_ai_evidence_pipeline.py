@@ -3,7 +3,7 @@ from tests.test_scraper_agent import FakeSession
 
 
 def test_ai_evidence_pipeline_runs_planner_and_scraper_together(tmp_path, monkeypatch):
-    monkeypatch.setenv("BRAVE_SEARCH_API_KEY", "brave-test")
+    monkeypatch.setenv("SEARCH_PROVIDER", "searxng")
     monkeypatch.setenv("FIRECRAWL_API_KEY", "firecrawl-test")
     startup = {
         "nome": "Clara Pagamentos",

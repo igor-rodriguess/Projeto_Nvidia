@@ -89,7 +89,7 @@ def test_planejar_busca_ia_startup_outputs_scraper_ready_tasks():
 
     assert task["id"].startswith("task_camada_")
     assert task["tipo"] == "busca_web"
-    assert task["motor"] == "brave"
+    assert task["motor"] == "searxng"
     assert task["camada"] == plano["plano_consultas"][0]["camada"]
     assert task["objetivo"] == plano["plano_consultas"][0]["objetivo"]
     assert site_task["tipo"] == "busca_site"

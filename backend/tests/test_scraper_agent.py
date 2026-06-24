@@ -34,32 +34,30 @@ class FakeSession:
 
     def get(self, url, **kwargs):
         self.calls.append(("GET", url, kwargs))
-        if "api.search.brave.com" in url:
+        if "localhost:8080/search" in url:
             return FakeResponse(
                 url=url,
                 json_payload={
-                    "web": {
-                        "results": [
-                            {
-                                "title": "Caso IA",
-                                "url": "https://example.com/ia",
-                                "description": "Startup usa machine learning e NVIDIA para modelos.",
-                            },
-                            {
-                                "title": "Sobre",
-                                "url": "https://example.com/sobre",
-                                "description": "Página institucional.",
-                            },
-                        ]
-                    }
+                    "results": [
+                        {
+                            "title": "Caso IA via SearXNG",
+                            "url": "https://example.com/ia",
+                            "content": "Startup usa machine learning e NVIDIA para modelos.",
+                        },
+                        {
+                            "title": "Sobre via SearXNG",
+                            "url": "https://example.com/sobre",
+                            "content": "Pagina institucional.",
+                        },
+                    ]
                 },
             )
         if url == "https://static.example.com/artigo":
             return FakeResponse(
                 text="""
                 <html>
-                  <head><title>Artigo Técnico</title></head>
-                  <body><article><h1>Artigo Técnico</h1><p>Texto sobre machine learning em produção.</p></article></body>
+                  <head><title>Artigo Tecnico</title></head>
+                  <body><article><h1>Artigo Tecnico</h1><p>Texto sobre machine learning em producao.</p></article></body>
                 </html>
                 """,
                 url=url,
@@ -71,13 +69,13 @@ class FakeSession:
                   <item>
                     <title>Clara Pagamentos usa IA</title>
                     <link>https://news.example.com/clara</link>
-                    <description>Notícia sobre machine learning.</description>
+                    <description>Noticia sobre machine learning.</description>
                     <pubDate>Tue, 23 Jun 2026 10:00:00 GMT</pubDate>
                   </item>
                   <item>
                     <title>Outra empresa</title>
                     <link>https://news.example.com/outra</link>
-                    <description>Sem relação.</description>
+                    <description>Sem relacao.</description>
                   </item>
                 </channel></rss>
                 """,
@@ -87,7 +85,20 @@ class FakeSession:
 
     def post(self, url, **kwargs):
         self.calls.append(("POST", url, kwargs))
-        if "api.firecrawl.dev" in url:
+        if "api.firecrawl.dev/v2/search" in url:
+            return FakeResponse(
+                url=url,
+                json_payload={
+                    "data": [
+                        {
+                            "title": "Caso IA via Firecrawl",
+                            "url": "https://example.com/ia",
+                            "description": "Startup usa machine learning e NVIDIA para modelos.",
+                        }
+                    ]
+                },
+            )
+        if "api.firecrawl.dev/v2/scrape" in url:
             target_url = kwargs["json"]["url"]
             return FakeResponse(
                 url=url,
@@ -105,8 +116,8 @@ class FakeSession:
         return FakeResponse(status_code=404, url=url)
 
 
-def test_scraper_agent_uses_brave_and_firecrawl_for_web_search(monkeypatch):
-    monkeypatch.setenv("BRAVE_SEARCH_API_KEY", "brave-test")
+def test_scraper_agent_uses_searxng_and_firecrawl_for_web_search(monkeypatch):
+    monkeypatch.setenv("SEARCH_PROVIDER", "searxng")
     monkeypatch.setenv("FIRECRAWL_API_KEY", "firecrawl-test")
     session = FakeSession()
     plano = {
@@ -118,7 +129,7 @@ def test_scraper_agent_uses_brave_and_firecrawl_for_web_search(monkeypatch):
                 "consulta": '"Clara Pagamentos" "machine learning"',
                 "max_resultados": 2,
                 "camada": 1,
-                "objetivo": "Detectar menções diretas a ML",
+                "objetivo": "Detectar mencoes diretas a ML",
             }
         ],
     }
@@ -129,14 +140,36 @@ def test_scraper_agent_uses_brave_and_firecrawl_for_web_search(monkeypatch):
     assert resultado["metricas"]["tarefas_executadas"] == 1
     assert resultado["metricas"]["total_resultados_busca"] == 2
     assert resultado["metricas"]["total_paginas_coletadas"] == 1
+    assert resultado["resultados_buscas"][0]["provedor_busca"] == "searxng"
     assert resultado["resultados_buscas"][0]["potencial_alto"] is True
     assert resultado["paginas_completas"][0]["conteudo_markdown"].startswith("# Caso IA")
-    assert any(call[0] == "GET" and "api.search.brave.com" in call[1] for call in session.calls)
-    assert any(call[0] == "POST" and "api.firecrawl.dev" in call[1] for call in session.calls)
+    assert any(call[0] == "GET" and "localhost:8080/search" in call[1] for call in session.calls)
+    assert any(call[0] == "POST" and "api.firecrawl.dev/v2/scrape" in call[1] for call in session.calls)
 
 
-def test_scraper_agent_converts_search_planner_plan_to_brave_tasks(monkeypatch):
-    monkeypatch.setenv("BRAVE_SEARCH_API_KEY", "brave-test")
+def test_scraper_agent_uses_firecrawl_search_when_selected(monkeypatch):
+    monkeypatch.setenv("SEARCH_PROVIDER", "firecrawl")
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "firecrawl-test")
+    plano = {
+        "startup": "Clara Pagamentos",
+        "tarefas": [
+            {
+                "id": "task_1",
+                "tipo": "busca_web",
+                "consulta": '"Clara Pagamentos" "machine learning"',
+                "max_resultados": 2,
+            }
+        ],
+    }
+
+    resultado = executar_scraper_agent(plano, session=FakeSession(), delay_seconds=0)
+
+    assert resultado["status"] == "completo"
+    assert resultado["resultados_buscas"][0]["provedor_busca"] == "firecrawl"
+
+
+def test_scraper_agent_converts_search_planner_plan_to_search_tasks(monkeypatch):
+    monkeypatch.setenv("SEARCH_PROVIDER", "searxng")
     monkeypatch.setenv("FIRECRAWL_API_KEY", "firecrawl-test")
     plano = {
         "startup": "Clara Pagamentos",
@@ -189,7 +222,7 @@ def test_scraper_agent_uses_trafilatura_for_direct_access():
                 "url": "https://static.example.com/artigo",
                 "extrator": "trafilatura",
                 "camada": 6,
-                "objetivo": "Coletar artigo estático.",
+                "objetivo": "Coletar artigo estatico.",
             }
         ],
     }
@@ -199,6 +232,28 @@ def test_scraper_agent_uses_trafilatura_for_direct_access():
     assert resultado["status"] == "completo"
     assert resultado["paginas_completas"][0]["extrator"] == "trafilatura"
     assert "machine learning" in resultado["paginas_completas"][0]["conteudo_textual"]
+
+
+def test_scraper_agent_falls_back_to_trafilatura_when_firecrawl_key_is_missing(monkeypatch):
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    plano = {
+        "startup": "Clara Pagamentos",
+        "tarefas": [
+            {
+                "id": "task_static",
+                "tipo": "acesso_direto",
+                "url": "https://static.example.com/artigo",
+                "extrator": "firecrawl",
+                "camada": 6,
+                "objetivo": "Coletar com fallback.",
+            }
+        ],
+    }
+
+    resultado = executar_scraper_agent(plano, session=FakeSession(), delay_seconds=0)
+
+    assert resultado["status"] == "completo"
+    assert resultado["paginas_completas"][0]["extrator"] == "trafilatura"
 
 
 def test_scraper_agent_executes_feed_rss():
@@ -219,26 +274,6 @@ def test_scraper_agent_executes_feed_rss():
     assert resultado["status"] == "completo"
     assert len(resultado["resultados"][0]["itens_filtrados"]) == 1
     assert resultado["resultados"][0]["itens_filtrados"][0]["titulo"] == "Clara Pagamentos usa IA"
-
-
-def test_scraper_agent_registers_missing_api_key_error(monkeypatch):
-    monkeypatch.delenv("BRAVE_SEARCH_API_KEY", raising=False)
-    plano = {
-        "startup": "Clara Pagamentos",
-        "tarefas": [
-            {
-                "id": "task_1",
-                "tipo": "busca_web",
-                "consulta": '"Clara Pagamentos" "machine learning"',
-            }
-        ],
-    }
-
-    resultado = executar_scraper_agent(plano, session=FakeSession(), delay_seconds=0)
-
-    assert resultado["status"] == "parcial"
-    assert resultado["metricas"]["tarefas_com_erro"] == 1
-    assert "BRAVE_SEARCH_API_KEY" in resultado["erros"][0]["erro"]
 
 
 def test_salvar_resultado_scraper_writes_json(tmp_path):
