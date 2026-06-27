@@ -111,6 +111,16 @@ class BatchRepository:
             )
         return len(running)
 
+    def requeue_retryable_items(self, batch_id: UUID, max_attempts: int) -> int:
+        failed = self.list_items(batch_id, statuses={"failed"})
+        retryable = [item for item in failed if int(item.get("attempt_count") or 0) < max_attempts]
+        for item in retryable:
+            self._update_item(
+                UUID(item["id"]),
+                {"status": "pending", "finished_at": None},
+            )
+        return len(retryable)
+
     def start_item(self, item_id: UUID) -> None:
         item = self.get_item(item_id)
         self._update_item(
@@ -196,6 +206,16 @@ class BatchRepository:
 
     def is_cancelled(self, batch_id: UUID) -> bool:
         return self.get_batch(batch_id)["status"] == "cancelled"
+
+    def list_batches(self, limit: int = 20) -> list[dict[str, Any]]:
+        response = (
+            self.db.table("batch_runs")
+            .select("*")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return list(getattr(response, "data", None) or [])
 
     def _update_batch(self, batch_id: UUID, values: dict[str, Any]) -> None:
         self.db.table("batch_runs").update(values).eq("id", str(batch_id)).execute()
