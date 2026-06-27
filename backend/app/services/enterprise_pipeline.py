@@ -8,12 +8,18 @@ import requests
 from langchain_core.runnables import Runnable, RunnableLambda
 
 from app.chains.agent_chains import (
+    create_briefing_generator_chain,
     create_classifier_chain,
     create_evidence_validator_chain,
+    create_impact_estimator_chain,
+    create_recommendation_refiner_chain,
     create_recommender_chain,
     create_scraper_chain,
     create_search_planner_chain,
 )
+from app.agents.briefing_generator_agent import BriefingGeneratorAgent
+from app.agents.impact_estimator_agent import ImpactEstimatorAgent
+from app.agents.recommendation_agent import RecommendationAgent
 from app.core.cache import JsonFileCache
 from app.core.contracts import validate_contract
 from app.core.observability import LOGGER
@@ -36,6 +42,9 @@ class EnterprisePipeline:
         firecrawl_client: Any | None = None,
         trafilatura_extractor: Any | None = None,
         persistence_hook: Any | None = None,
+        recommendation_agent: RecommendationAgent | None = None,
+        impact_estimator_agent: ImpactEstimatorAgent | None = None,
+        briefing_generator_agent: BriefingGeneratorAgent | None = None,
     ) -> None:
         self.cache = cache or JsonFileCache()
         self.use_cache = use_cache
@@ -56,8 +65,22 @@ class EnterprisePipeline:
             enable_retry=False,
         )
         self.classifier_chain = create_classifier_chain(enable_retry=False)
+        rag_recommender = recommender or NVIDIARecommenderRAG()
+        shared_store = getattr(rag_recommender, "store", None)
         self.recommender_chain = create_recommender_chain(
-            recommender=recommender,
+            recommender=rag_recommender,
+            enable_retry=False,
+        )
+        self.recommendation_refiner_chain = create_recommendation_refiner_chain(
+            agent=recommendation_agent or RecommendationAgent(store=shared_store),
+            enable_retry=False,
+        )
+        self.impact_estimator_chain = create_impact_estimator_chain(
+            agent=impact_estimator_agent or ImpactEstimatorAgent(store=shared_store),
+            enable_retry=False,
+        )
+        self.briefing_generator_chain = create_briefing_generator_chain(
+            agent=briefing_generator_agent,
             enable_retry=False,
         )
         self.runnable = self._build_runnable()
@@ -74,6 +97,9 @@ class EnterprisePipeline:
             | RunnableLambda(self._validator_stage)
             | RunnableLambda(self._classifier_stage)
             | RunnableLambda(self._recommender_stage)
+            | RunnableLambda(self._recommendation_refiner_stage)
+            | RunnableLambda(self._impact_estimator_stage)
+            | RunnableLambda(self._briefing_generator_stage)
             | RunnableLambda(self._finalize)
         )
 
@@ -141,6 +167,53 @@ class EnterprisePipeline:
             output_key="recommendation_output",
             input_builder=lambda: {"classificacao_ia": state["classification_output"]},
             operation=lambda payload: self.recommender_chain.invoke(payload),
+        )
+
+    def _recommendation_refiner_stage(self, state: dict[str, Any]) -> dict[str, Any]:
+        return self._execute_dependent_stage(
+            state,
+            stage="recommendation_refiner",
+            dependency="recommendation_output",
+            output_key="refinement_output",
+            input_builder=lambda: {
+                "classificacao_ia": state["classification_output"],
+                "recomendacao_rag": state["recommendation_output"],
+                "startup_profile": state["input"],
+                "evidencias_altas": state.get("validation_output", {}).get(
+                    "evidencias_validadas", []
+                ),
+            },
+            operation=lambda payload: self.recommendation_refiner_chain.invoke(payload),
+        )
+
+    def _impact_estimator_stage(self, state: dict[str, Any]) -> dict[str, Any]:
+        return self._execute_dependent_stage(
+            state,
+            stage="impact_estimator",
+            dependency="refinement_output",
+            output_key="impact_output",
+            input_builder=lambda: {
+                "classificacao_ia": state["classification_output"],
+                "recomendacao_refinada": state["refinement_output"],
+                "dados_adicionais": state["input"].get("dados_adicionais", {}),
+            },
+            operation=lambda payload: self.impact_estimator_chain.invoke(payload),
+        )
+
+    def _briefing_generator_stage(self, state: dict[str, Any]) -> dict[str, Any]:
+        return self._execute_dependent_stage(
+            state,
+            stage="briefing_generator",
+            dependency="impact_output",
+            output_key="briefing_output",
+            input_builder=lambda: {
+                "startup_profile": state["input"],
+                "classificacao_ia": state["classification_output"],
+                "recomendacao_refinada": state["refinement_output"],
+                "estimativa_impacto": state["impact_output"],
+                "validacao_evidencias": state.get("validation_output"),
+            },
+            operation=lambda payload: self.briefing_generator_chain.invoke(payload),
         )
 
     def _execute_dependent_stage(
@@ -248,12 +321,18 @@ class EnterprisePipeline:
                 self._record_persistence_error(state, "finalization", exc)
         classification = state.get("classification_output") or {}
         recommendation = state.get("recommendation_output")
+        refinement = state.get("refinement_output")
+        impact = state.get("impact_output")
+        briefing = state.get("briefing_output") or {}
         output = {
             "startup": state["input"]["startup_name"],
             "status": "parcial" if state["errors"] else "completo",
             "classificacao": classification.get("classificacao"),
             "nivel_maturidade": classification.get("nivel_maturidade"),
             "recomendacao": recommendation,
+            "recomendacao_refinada": refinement,
+            "impacto_estimado": impact,
+            "briefing_markdown": briefing.get("markdown"),
             "trace": state["trace"],
             "errors": state["errors"],
         }
@@ -295,7 +374,13 @@ def run_enterprise_pipeline(
 
 
 def _result_count(output: dict[str, Any]) -> int:
-    for key in ("recomendacoes", "evidencias_validadas", "resultados_buscas", "plano_consultas"):
+    for key in (
+        "recomendacoes",
+        "estimativas_impacto",
+        "evidencias_validadas",
+        "resultados_buscas",
+        "plano_consultas",
+    ):
         value = output.get(key)
         if isinstance(value, list):
             return len(value)

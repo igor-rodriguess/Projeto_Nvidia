@@ -1,63 +1,52 @@
-# Arquitetura — NVIDIA Startup AI Radar
+# Arquitetura - NVIDIA Startup AI Radar
 
 ## Visão Geral
 
-A solução é baseada em um pipeline multiagente orquestrado via LangGraph, composto por 9 agentes especializados que operam de forma sequencial e modular.
+A solução usa uma pipeline multiagente orquestrada com LangChain Runnables. Os oito
+estágios operacionais são sequenciais, modulares, cacheáveis e observáveis.
 
-## Componentes Principais
+## Pipeline Operacional
 
-### Backend (FastAPI)
-- **agents/** — agentes especializados do pipeline
-- **core/** — estado compartilhado do pipeline (`StartupAnalysisState`)
-- **services/** — orquestração do pipeline (`startup_search_pipeline.py`)
-- **routes/** — endpoints REST expostos ao frontend
-
-### Pipeline Multiagente
-
+```text
+Entrada da startup
+  -> Search Planner Agent
+  -> Scraper Agent
+  -> Evidence Validator Agent
+  -> AI Maturity Classifier Agent
+  -> NVIDIA Recommender RAG
+  -> Recommendation Agent
+  -> Impact Estimator Agent
+  -> Briefing Generator Agent
+  -> Briefing executivo em Markdown
 ```
-Entrada do usuário
-       │
-       ▼
-SearchPlannerAgent
-       │
-       ▼
-SourceCollectorAgent
-       │
-       ▼
-DataExtractorAgent
-       │
-       ▼
-EvidenceValidatorAgent
-       │
-       ▼
-AIMaturityClassifierAgent
-       │
-       ▼
-NVIDIARagAgent
-       │
-       ▼
-RecommendationAgent
-       │
-       ▼
-ImpactEstimatorAgent
-       │
-       ▼
-BriefingGeneratorAgent
-       │
-       ▼
-Briefing Executivo Final
-```
+
+O `Scraper Agent` concentra busca web e extração de páginas. O `NVIDIA Recommender
+RAG` consulta o Qdrant e entrega recomendações brutas fundamentadas. Os três últimos
+agentes priorizam a adoção, estimam impacto sem inventar benchmarks e consolidam o
+resultado para decisão executiva.
+
+## Armazenamento
+
+- **Supabase PostgreSQL:** startups, execuções, fontes, evidências, classificações,
+  recomendações, impactos e briefings.
+- **Supabase Storage:** traces completos em JSON no bucket privado.
+- **Qdrant:** chunks e embeddings da documentação oficial NVIDIA.
+- **Cache local:** resultados intermediários determinísticos por estágio.
 
 ## Tecnologias
 
 | Camada | Tecnologia |
 |---|---|
-| Orquestração | LangGraph |
-| Backend | FastAPI |
-| LLM | (a definir) |
-| Embeddings / RAG | (a definir) |
-| Frontend | (a definir) |
+| Orquestração | LangChain Runnables |
+| Coleta web | SearXNG, DDGS, Firecrawl e trafilatura |
+| Contratos | Pydantic e JSON Schema |
+| RAG | Qdrant, busca híbrida dense + BM25 e reranking |
+| Persistência | Supabase PostgreSQL e Storage privado |
+| Geração | Determinística por padrão; OpenAI opcional no RAG |
 
-## Diagrama de Dados
+## Resiliência
 
-Ver [startup_analysis_state.md](startup_analysis_state.md) para a modelagem do estado compartilhado entre os agentes.
+Cada estágio registra duração, tentativas, erros e output no `trace`. Falhas de
+persistência ativam modo degradado e não interrompem a investigação. Estimativas
+quantitativas exigem benchmark recuperado com URL; na ausência dele, o sistema
+retorna KPIs e incertezas para validação em prova de conceito.

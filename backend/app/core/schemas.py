@@ -37,6 +37,7 @@ class PipelineInput(ContractModel):
     estado: str | None = None
     pais: str | None = "Brasil"
     contexto: str | None = None
+    dados_adicionais: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("site_oficial")
     @classmethod
@@ -405,6 +406,9 @@ class PipelineOutput(ContractModel):
     classificacao: AIClassification | None = None
     nivel_maturidade: int | None = Field(default=None, ge=0, le=5)
     recomendacao: NVIDIARecommendationOutput | None = None
+    recomendacao_refinada: RecommendationRefinementOutput | None = None
+    impacto_estimado: ImpactEstimationOutput | None = None
+    briefing_markdown: str | None = None
     trace: dict[str, StageTrace]
     errors: list[str] = Field(default_factory=list)
 

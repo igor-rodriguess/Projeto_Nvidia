@@ -204,16 +204,41 @@ def test_persistence_service_saves_complete_normalized_run():
             }
         ],
     )
+    refinement_id = service.save_refinement(
+        run_id,
+        {
+            "startup": "Clara Pagamentos",
+            "recomendacao_refinada": {"fit_score": 0.84, "tecnologias_priorizadas": []},
+        },
+    )
+    impact_id = service.save_impact_estimate(
+        run_id,
+        {
+            "startup": "Clara Pagamentos",
+            "indice_impacto_agregado": 76,
+            "estimativas_impacto": [],
+        },
+    )
+    briefing_id = service.save_briefing(
+        run_id,
+        {"startup": "Clara Pagamentos", "markdown": "# Briefing NVIDIA Inception"},
+    )
     trace_path = service.upload_trace(run_id, {"search_planner": {"status": "completo"}})
     service.update_stage(run_id, "completed", "completed", {"errors": []})
 
     assert isinstance(assessment_id, UUID)
     assert isinstance(recommendation_id, UUID)
+    assert isinstance(refinement_id, UUID)
+    assert isinstance(impact_id, UUID)
+    assert isinstance(briefing_id, UUID)
     assert trace_path == f"{run_id}.json"
     assert trace_path in client.storage.files["pipeline-traces"]
     assert client.database.rows["pipeline_runs"][0]["status"] == "completed"
     assert client.database.rows["pipeline_runs"][0]["duration_ms"] >= 0
     assert len(client.database.rows["recommendation_citations"]) == 1
+    assert client.database.rows["recommendation_refinements"][0]["fit_score"] == 0.84
+    assert client.database.rows["impact_estimates"][0]["aggregate_index"] == 76
+    assert client.database.rows["executive_briefings"][0]["markdown"].startswith("# Briefing")
 
 
 def test_non_ai_assessment_requires_maturity_zero():
@@ -235,7 +260,7 @@ def test_migration_contains_security_and_storage_requirements():
     )
 
     assert "create schema if not exists nvidia_inception" in sql.lower()
-    assert sql.lower().count("enable row level security") == 8
+    assert sql.lower().count("enable row level security") == 11
     assert "to service_role" in sql
     assert "pipeline-traces" in sql
     assert "startups_nome_lower_uidx" in sql

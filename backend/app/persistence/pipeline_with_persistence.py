@@ -79,6 +79,12 @@ class PipelinePersistenceHook:
                     recommendation=output,
                     citations=_citations_from_recommendation(output),
                 )
+            elif stage == "recommendation_refiner":
+                self.persistence.save_refinement(run_id, output)
+            elif stage == "impact_estimator":
+                self.persistence.save_impact_estimate(run_id, output)
+            elif stage == "briefing_generator":
+                self.persistence.save_briefing(run_id, output)
         except PersistenceError as exc:
             errors.append(str(exc))
 

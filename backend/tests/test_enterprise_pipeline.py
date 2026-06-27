@@ -13,7 +13,7 @@ class FakeRecommender:
         )
 
 
-def test_enterprise_pipeline_returns_all_five_trace_stages(monkeypatch, tmp_path):
+def test_enterprise_pipeline_returns_all_eight_trace_stages(monkeypatch, tmp_path):
     monkeypatch.setenv("SEARCH_PROVIDER", "searxng")
     monkeypatch.setenv("FIRECRAWL_API_KEY", "firecrawl-test")
 
@@ -39,7 +39,13 @@ def test_enterprise_pipeline_returns_all_five_trace_stages(monkeypatch, tmp_path
         "evidence_validator",
         "ai_maturity_classifier",
         "nvidia_recommender_rag",
+        "recommendation_refiner",
+        "impact_estimator",
+        "briefing_generator",
     }
     assert result["classificacao"] in {"AI-native", "AI-enabled", "API-consumer", "Non-AI"}
     assert result["recomendacao"]["startup"] == "Clara Pagamentos"
+    assert result["recomendacao_refinada"]["startup"] == "Clara Pagamentos"
+    assert result["impacto_estimado"]["startup"] == "Clara Pagamentos"
+    assert result["briefing_markdown"].startswith("# Briefing NVIDIA Inception")
     assert all("output" in stage for stage in result["trace"].values())

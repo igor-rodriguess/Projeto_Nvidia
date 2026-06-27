@@ -180,12 +180,15 @@ def _grounded_benefit(
     if not chunks:
         return f"Beneficio potencial ainda a validar. Fundamentacao disponivel: {fallback}"
     content = " ".join(chunks[0].content.split())
+    content = re.sub(r"\[([^\]]+)\]\(https?://[^)]+\)", r"\1", content)
+    content = re.sub(r"https?://\S+", "", content)
     sentences = re.split(r"(?<=[.!?])\s+", content)
     selected = next(
         (sentence for sentence in sentences if technology.lower() in sentence.lower()),
         sentences[0],
     )
-    return f"Conforme a documentacao recuperada: {selected[:360]}"
+    excerpt = selected[:280].rsplit(" ", 1)[0] if len(selected) > 280 else selected
+    return f"Conforme a documentacao recuperada: {excerpt.strip()}"
 
 
 def _source_urls(chunks: list[RetrievedChunk], citations: list[str]) -> list[str]:

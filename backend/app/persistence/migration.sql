@@ -170,6 +170,29 @@ create table if not exists nvidia_inception.recommendation_citations (
   unique (recommendation_id, tecnologia, url_doc, trecho_doc)
 );
 
+create table if not exists nvidia_inception.recommendation_refinements (
+  id uuid primary key default gen_random_uuid(),
+  pipeline_run_id uuid not null unique references nvidia_inception.pipeline_runs(id) on delete cascade,
+  refinement_json jsonb not null default '{}'::jsonb,
+  fit_score double precision not null check (fit_score between 0.0 and 1.0),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists nvidia_inception.impact_estimates (
+  id uuid primary key default gen_random_uuid(),
+  pipeline_run_id uuid not null unique references nvidia_inception.pipeline_runs(id) on delete cascade,
+  impact_json jsonb not null default '{}'::jsonb,
+  aggregate_index smallint not null check (aggregate_index between 0 and 100),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists nvidia_inception.executive_briefings (
+  id uuid primary key default gen_random_uuid(),
+  pipeline_run_id uuid not null unique references nvidia_inception.pipeline_runs(id) on delete cascade,
+  markdown text not null check (length(trim(markdown)) > 0),
+  created_at timestamptz not null default now()
+);
+
 create index if not exists pipeline_runs_startup_id_idx
   on nvidia_inception.pipeline_runs(startup_id);
 create index if not exists pipeline_runs_status_idx
@@ -192,6 +215,12 @@ create index if not exists recommendations_run_id_idx
   on nvidia_inception.nvidia_recommendations(pipeline_run_id);
 create index if not exists citations_recommendation_id_idx
   on nvidia_inception.recommendation_citations(recommendation_id);
+create index if not exists refinements_run_id_idx
+  on nvidia_inception.recommendation_refinements(pipeline_run_id);
+create index if not exists impact_estimates_run_id_idx
+  on nvidia_inception.impact_estimates(pipeline_run_id);
+create index if not exists executive_briefings_run_id_idx
+  on nvidia_inception.executive_briefings(pipeline_run_id);
 
 drop trigger if exists startups_set_updated_at on nvidia_inception.startups;
 create trigger startups_set_updated_at
@@ -211,6 +240,9 @@ alter table nvidia_inception.evidences enable row level security;
 alter table nvidia_inception.ai_assessments enable row level security;
 alter table nvidia_inception.nvidia_recommendations enable row level security;
 alter table nvidia_inception.recommendation_citations enable row level security;
+alter table nvidia_inception.recommendation_refinements enable row level security;
+alter table nvidia_inception.impact_estimates enable row level security;
+alter table nvidia_inception.executive_briefings enable row level security;
 
 do $$
 declare
@@ -218,7 +250,8 @@ declare
 begin
   foreach table_name in array array[
     'startups', 'pipeline_runs', 'search_queries', 'sources', 'evidences',
-    'ai_assessments', 'nvidia_recommendations', 'recommendation_citations'
+    'ai_assessments', 'nvidia_recommendations', 'recommendation_citations',
+    'recommendation_refinements', 'impact_estimates', 'executive_briefings'
   ] loop
     execute format('drop policy if exists service_role_all on nvidia_inception.%I', table_name);
     execute format(

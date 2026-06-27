@@ -37,6 +37,9 @@ Cubo Itaú
   -> Evidence Validator Agent
   -> AI Maturity Classifier Agent
   -> NVIDIA Recommender RAG
+  -> Recommendation Agent
+  -> Impact Estimator Agent
+  -> Briefing Generator Agent
 ```
 
 O Evidence Validator Agent audita os resultados coletados, remove URLs quebradas,
@@ -78,14 +81,15 @@ Para ingerir a documentação oficial NVIDIA:
 python scripts/ingest_nvidia_knowledge.py
 ```
 
-Para executar os cinco agentes:
+Para executar os oito estágios de investigação e recomendação:
 
 ```bash
 python scripts/run_enterprise_pipeline.py "Nome da Startup" "https://startup.com"
 ```
 
 O resultado contém `trace` com a saída, duração, tentativas, tokens e erros de cada
-agente. Resultados intermediários são cacheados em `backend/data/cache/pipeline/`.
+agente, além de `recomendacao_refinada`, `impacto_estimado` e `briefing_markdown`.
+Resultados intermediários são cacheados em `backend/data/cache/pipeline/`.
 
 Mais detalhes estão em [docs/rag_architecture.md](docs/rag_architecture.md) e
 [docs/operations.md](docs/operations.md).
@@ -93,7 +97,7 @@ Mais detalhes estão em [docs/rag_architecture.md](docs/rag_architecture.md) e
 ## Persistência
 
 O Supabase PostgreSQL armazena startups, execuções, consultas, fontes, evidências,
-classificações e recomendações. Traces grandes ficam no bucket privado
+classificações, recomendações, estimativas de impacto e briefings. Traces grandes ficam no bucket privado
 `pipeline-traces`; o Qdrant permanece dedicado à recuperação vetorial.
 
 As instruções e a migration estão em

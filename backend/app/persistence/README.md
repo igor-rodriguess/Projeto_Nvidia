@@ -23,6 +23,9 @@ O schema `nvidia_inception` contém:
 - `ai_assessments`: classificação e maturidade de IA.
 - `nvidia_recommendations`: saída consolidada do RAG.
 - `recommendation_citations`: documentos que fundamentam a recomendação.
+- `recommendation_refinements`: tecnologias priorizadas, roadmap e fit final.
+- `impact_estimates`: estimativas fundamentadas, KPIs e índice agregado.
+- `executive_briefings`: briefing executivo final em Markdown.
 
 ## Aplicar a migration
 

@@ -89,6 +89,11 @@
       ],
       "default": null,
       "title": "Contexto"
+    },
+    "dados_adicionais": {
+      "additionalProperties": true,
+      "title": "Dados Adicionais",
+      "type": "object"
     }
   },
   "required": [

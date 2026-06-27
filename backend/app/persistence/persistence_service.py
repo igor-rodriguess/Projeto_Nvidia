@@ -16,9 +16,12 @@ from app.persistence.models import (
     AIAssessment,
     Evidence,
     EvidenceInput,
+    ExecutiveBriefingRecord,
+    ImpactEstimateRecord,
     NVIDIARecommendation,
     PipelineRun,
     RecommendationCitation,
+    RecommendationRefinementRecord,
     RunStatus,
     SearchQuery,
     Source,
@@ -318,6 +321,70 @@ class PipelinePersistence:
             return path
         except Exception as exc:
             raise self._handle_error("upload_trace", exc, run_id=run_id) from exc
+
+    def save_refinement(self, run_id: UUID, refinement: dict[str, Any]) -> UUID:
+        """Persist the prioritized recommendation package for one execution."""
+        try:
+            content = refinement.get("recomendacao_refinada", {})
+            model = RecommendationRefinementRecord(
+                pipeline_run_id=run_id,
+                refinement_json=refinement,
+                fit_score=content.get("fit_score", 0.0),
+            )
+            return self._upsert_run_artifact(
+                "recommendation_refinements",
+                model.model_dump(mode="json", exclude={"id", "created_at"}),
+                "recommendation_refinements.upsert",
+            )
+        except PersistenceError:
+            raise
+        except Exception as exc:
+            raise self._handle_error("save_refinement", exc, run_id=run_id) from exc
+
+    def save_impact_estimate(self, run_id: UUID, impact: dict[str, Any]) -> UUID:
+        """Persist the grounded impact estimate for one execution."""
+        try:
+            model = ImpactEstimateRecord(
+                pipeline_run_id=run_id,
+                impact_json=impact,
+                aggregate_index=impact.get("indice_impacto_agregado", 0),
+            )
+            return self._upsert_run_artifact(
+                "impact_estimates",
+                model.model_dump(mode="json", exclude={"id", "created_at"}),
+                "impact_estimates.upsert",
+            )
+        except PersistenceError:
+            raise
+        except Exception as exc:
+            raise self._handle_error("save_impact_estimate", exc, run_id=run_id) from exc
+
+    def save_briefing(self, run_id: UUID, briefing: dict[str, Any]) -> UUID:
+        """Persist the final executive Markdown for one execution."""
+        try:
+            model = ExecutiveBriefingRecord(
+                pipeline_run_id=run_id,
+                markdown=briefing["markdown"],
+            )
+            return self._upsert_run_artifact(
+                "executive_briefings",
+                model.model_dump(mode="json", exclude={"id", "created_at"}),
+                "executive_briefings.upsert",
+            )
+        except PersistenceError:
+            raise
+        except Exception as exc:
+            raise self._handle_error("save_briefing", exc, run_id=run_id) from exc
+
+    def _upsert_run_artifact(
+        self,
+        table: str,
+        payload: dict[str, Any],
+        operation: str,
+    ) -> UUID:
+        response = self._table(table).upsert(payload, on_conflict="pipeline_run_id").execute()
+        row = self._require_first(response, operation)
+        return UUID(row["id"])
 
     def _table(self, name: str) -> Any:
         return self.db.table(name)

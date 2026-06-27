@@ -81,3 +81,17 @@ def test_recommendation_agent_handles_empty_rag_recommendation():
     assert result.recomendacao_refinada.fit_score == 0
     assert result.recomendacao_refinada.tecnologias_priorizadas == []
     assert result.recomendacao_refinada.alertas == ["Sem recomendacao fundamentada."]
+
+
+def test_recommendation_agent_removes_markdown_links_from_benefit():
+    payload = _payload()
+    payload["recomendacao_rag"]["chunks_utilizados"][0]["content"] = (
+        "Triton oferece [metricas oficiais](https://docs.nvidia.com/triton/metrics) "
+        "para avaliar o serving de modelos."
+    )
+
+    result = RecommendationAgent().refine(payload)
+    benefit = result.recomendacao_refinada.tecnologias_priorizadas[0].beneficio
+
+    assert "metricas oficiais" in benefit
+    assert "](http" not in benefit
