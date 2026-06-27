@@ -1,12 +1,14 @@
 services:
-  qdrant:
-    image: qdrant/qdrant:latest
-    container_name: nvidia-ai-radar-qdrant
+  searxng:
+    image: searxng/searxng:latest
+    container_name: nvidia-ai-radar-searxng
     ports:
-      - "6333:6333"
-      - "6334:6334"
+      - "8080:8080"
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8080/
     volumes:
-      - qdrant_storage:/qdrant/storage
+      - searxng_data:/etc/searxng
+    restart: unless-stopped
 
 volumes:
-  qdrant_storage:
+  searxng_data:

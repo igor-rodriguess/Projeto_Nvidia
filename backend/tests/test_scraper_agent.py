@@ -89,13 +89,15 @@ class FakeSession:
             return FakeResponse(
                 url=url,
                 json_payload={
-                    "data": [
+                    "data": {
+                        "web": [
                         {
                             "title": "Caso IA via Firecrawl",
                             "url": "https://example.com/ia",
                             "description": "Startup usa machine learning e NVIDIA para modelos.",
                         }
-                    ]
+                        ]
+                    }
                 },
             )
         if "api.firecrawl.dev/v2/scrape" in url:

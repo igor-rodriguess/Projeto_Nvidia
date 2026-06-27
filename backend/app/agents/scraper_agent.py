@@ -209,7 +209,11 @@ class FirecrawlSearchClient:
         )
         response.raise_for_status()
         payload = response.json()
-        raw_results = payload.get("data") or payload.get("results") or []
+        data = payload.get("data") or {}
+        if isinstance(data, dict):
+            raw_results = data.get("web") or data.get("results") or []
+        else:
+            raw_results = data or payload.get("results") or []
         results = []
 
         for item in raw_results[:count]:
