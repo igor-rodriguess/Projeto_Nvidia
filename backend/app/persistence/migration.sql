@@ -51,6 +51,7 @@ $$;
 
 create table if not exists nvidia_inception.startups (
   id uuid primary key default gen_random_uuid(),
+  external_id text,
   nome text not null check (length(trim(nome)) > 0),
   site_oficial text,
   categoria text,
@@ -65,11 +66,17 @@ create table if not exists nvidia_inception.startups (
   )
 );
 
+alter table nvidia_inception.startups
+  add column if not exists external_id text;
+
 create unique index if not exists startups_nome_lower_uidx
   on nvidia_inception.startups (lower(nome));
 create unique index if not exists startups_site_oficial_uidx
   on nvidia_inception.startups (site_oficial)
   where site_oficial is not null;
+create unique index if not exists startups_external_id_uidx
+  on nvidia_inception.startups (external_id)
+  where external_id is not null;
 
 create table if not exists nvidia_inception.pipeline_runs (
   id uuid primary key default gen_random_uuid(),
@@ -193,6 +200,47 @@ create table if not exists nvidia_inception.executive_briefings (
   created_at timestamptz not null default now()
 );
 
+create table if not exists nvidia_inception.batch_runs (
+  id uuid primary key default gen_random_uuid(),
+  status text not null default 'pending'
+    check (status in ('pending', 'running', 'completed', 'partial', 'failed', 'cancelled')),
+  source_path text not null,
+  total_items integer not null default 0 check (total_items >= 0),
+  processed_items integer not null default 0 check (processed_items >= 0),
+  succeeded_items integer not null default 0 check (succeeded_items >= 0),
+  partial_items integer not null default 0 check (partial_items >= 0),
+  failed_items integer not null default 0 check (failed_items >= 0),
+  options jsonb not null default '{}'::jsonb,
+  errors jsonb not null default '[]'::jsonb,
+  started_at timestamptz,
+  finished_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint batch_progress_check check (processed_items <= total_items),
+  constraint batch_result_count_check check (
+    succeeded_items + partial_items + failed_items <= processed_items
+  )
+);
+
+create table if not exists nvidia_inception.batch_items (
+  id uuid primary key default gen_random_uuid(),
+  batch_run_id uuid not null references nvidia_inception.batch_runs(id) on delete cascade,
+  startup_external_id text not null,
+  startup_name text not null check (length(trim(startup_name)) > 0),
+  startup_payload jsonb not null default '{}'::jsonb,
+  status text not null default 'pending'
+    check (status in ('pending', 'running', 'completed', 'partial', 'failed', 'skipped')),
+  pipeline_run_id uuid references nvidia_inception.pipeline_runs(id) on delete set null,
+  attempt_count integer not null default 0 check (attempt_count >= 0),
+  last_error text,
+  result_summary jsonb not null default '{}'::jsonb,
+  started_at timestamptz,
+  finished_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (batch_run_id, startup_external_id)
+);
+
 create index if not exists pipeline_runs_startup_id_idx
   on nvidia_inception.pipeline_runs(startup_id);
 create index if not exists pipeline_runs_status_idx
@@ -221,6 +269,12 @@ create index if not exists impact_estimates_run_id_idx
   on nvidia_inception.impact_estimates(pipeline_run_id);
 create index if not exists executive_briefings_run_id_idx
   on nvidia_inception.executive_briefings(pipeline_run_id);
+create index if not exists batch_runs_status_idx
+  on nvidia_inception.batch_runs(status);
+create index if not exists batch_items_batch_status_idx
+  on nvidia_inception.batch_items(batch_run_id, status);
+create index if not exists batch_items_pipeline_run_id_idx
+  on nvidia_inception.batch_items(pipeline_run_id);
 
 drop trigger if exists startups_set_updated_at on nvidia_inception.startups;
 create trigger startups_set_updated_at
@@ -230,6 +284,16 @@ for each row execute function nvidia_inception.set_updated_at();
 drop trigger if exists pipeline_runs_set_updated_at on nvidia_inception.pipeline_runs;
 create trigger pipeline_runs_set_updated_at
 before update on nvidia_inception.pipeline_runs
+for each row execute function nvidia_inception.set_updated_at();
+
+drop trigger if exists batch_runs_set_updated_at on nvidia_inception.batch_runs;
+create trigger batch_runs_set_updated_at
+before update on nvidia_inception.batch_runs
+for each row execute function nvidia_inception.set_updated_at();
+
+drop trigger if exists batch_items_set_updated_at on nvidia_inception.batch_items;
+create trigger batch_items_set_updated_at
+before update on nvidia_inception.batch_items
 for each row execute function nvidia_inception.set_updated_at();
 
 alter table nvidia_inception.startups enable row level security;
@@ -243,6 +307,8 @@ alter table nvidia_inception.recommendation_citations enable row level security;
 alter table nvidia_inception.recommendation_refinements enable row level security;
 alter table nvidia_inception.impact_estimates enable row level security;
 alter table nvidia_inception.executive_briefings enable row level security;
+alter table nvidia_inception.batch_runs enable row level security;
+alter table nvidia_inception.batch_items enable row level security;
 
 do $$
 declare
@@ -251,7 +317,8 @@ begin
   foreach table_name in array array[
     'startups', 'pipeline_runs', 'search_queries', 'sources', 'evidences',
     'ai_assessments', 'nvidia_recommendations', 'recommendation_citations',
-    'recommendation_refinements', 'impact_estimates', 'executive_briefings'
+    'recommendation_refinements', 'impact_estimates', 'executive_briefings',
+    'batch_runs', 'batch_items'
   ] loop
     execute format('drop policy if exists service_role_all on nvidia_inception.%I', table_name);
     execute format(

@@ -8,6 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 
 RunStatus = Literal["pending", "running", "completed", "partial", "failed"]
+BatchStatus = Literal["pending", "running", "completed", "partial", "failed", "cancelled"]
+BatchItemStatus = Literal["pending", "running", "completed", "partial", "failed", "skipped"]
 SourceType = Literal["oficial", "imprensa", "ecossistema", "social", "outro"]
 SourceStatus = Literal["acessivel", "quebrada", "bloqueada"]
 EvidenceClassification = Literal["alta", "media", "baixa"]
@@ -24,6 +26,7 @@ class Startup(PersistenceModel):
     """Startup persisted as the root entity of pipeline executions."""
 
     id: UUID | None = None
+    external_id: str | None = None
     nome: str = Field(min_length=1)
     site_oficial: HttpUrl | None = None
     categoria: str | None = None
@@ -188,3 +191,41 @@ class ExecutiveBriefingRecord(PersistenceModel):
     pipeline_run_id: UUID
     markdown: str = Field(min_length=1, max_length=12000)
     created_at: datetime | None = None
+
+
+class BatchRun(PersistenceModel):
+    """Durable execution state for processing a curated startup collection."""
+
+    id: UUID | None = None
+    status: BatchStatus = "pending"
+    source_path: str = Field(min_length=1)
+    total_items: int = Field(default=0, ge=0)
+    processed_items: int = Field(default=0, ge=0)
+    succeeded_items: int = Field(default=0, ge=0)
+    partial_items: int = Field(default=0, ge=0)
+    failed_items: int = Field(default=0, ge=0)
+    options: dict[str, Any] = Field(default_factory=dict)
+    errors: list[str] = Field(default_factory=list)
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class BatchItem(PersistenceModel):
+    """One startup investigation belonging to a durable batch run."""
+
+    id: UUID | None = None
+    batch_run_id: UUID
+    startup_external_id: str = Field(min_length=1)
+    startup_name: str = Field(min_length=1)
+    startup_payload: dict[str, Any] = Field(default_factory=dict)
+    status: BatchItemStatus = "pending"
+    pipeline_run_id: UUID | None = None
+    attempt_count: int = Field(default=0, ge=0)
+    last_error: str | None = None
+    result_summary: dict[str, Any] = Field(default_factory=dict)
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None

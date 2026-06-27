@@ -1,6 +1,18 @@
 {
   "additionalProperties": true,
   "properties": {
+    "external_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "External Id"
+    },
     "startup_name": {
       "minLength": 1,
       "title": "Startup Name",

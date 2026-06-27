@@ -333,6 +333,7 @@ class EnterprisePipeline:
             "recomendacao_refinada": refinement,
             "impacto_estimado": impact,
             "briefing_markdown": briefing.get("markdown"),
+            "pipeline_run_id": state.get("_persistence", {}).get("run_id"),
             "trace": state["trace"],
             "errors": state["errors"],
         }

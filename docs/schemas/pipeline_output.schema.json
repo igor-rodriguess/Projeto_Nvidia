@@ -723,6 +723,18 @@
       "default": null,
       "title": "Briefing Markdown"
     },
+    "pipeline_run_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pipeline Run Id"
+    },
     "trace": {
       "additionalProperties": {
         "$ref": "#/$defs/StageTrace"

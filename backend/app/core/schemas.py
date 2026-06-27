@@ -29,6 +29,7 @@ class ContractModel(BaseModel):
 
 
 class PipelineInput(ContractModel):
+    external_id: str | None = None
     startup_name: str = Field(min_length=1)
     site_oficial: str | None = None
     categoria: str | None = None
@@ -409,6 +410,7 @@ class PipelineOutput(ContractModel):
     recomendacao_refinada: RecommendationRefinementOutput | None = None
     impacto_estimado: ImpactEstimationOutput | None = None
     briefing_markdown: str | None = None
+    pipeline_run_id: str | None = None
     trace: dict[str, StageTrace]
     errors: list[str] = Field(default_factory=list)
 

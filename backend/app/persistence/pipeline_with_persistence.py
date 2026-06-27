@@ -23,6 +23,7 @@ class PipelinePersistenceHook:
         pipeline_input = state["input"]
         startup_id = self.persistence.save_startup(
             {
+                "external_id": pipeline_input.get("external_id"),
                 "nome": pipeline_input["startup_name"],
                 "site_oficial": pipeline_input.get("site_oficial"),
                 "categoria": pipeline_input.get("categoria"),
