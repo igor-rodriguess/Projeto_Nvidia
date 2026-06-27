@@ -82,6 +82,13 @@ O último endpoint retorna `text/markdown`. Os demais retornam JSON.
 - `X-Request-ID`: aceito na entrada e devolvido em toda resposta.
 - Logs: JSON estruturado com request ID, duração, status e falhas por estágio.
 
+Teste rápido de aceitação:
+
+```bash
+cd backend
+python scripts/smoke_backend.py
+```
+
 ## Executar com Docker
 
 ```bash
