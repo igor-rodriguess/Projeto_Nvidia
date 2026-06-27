@@ -204,6 +204,19 @@ class BatchRepository:
             {"status": "cancelled", "finished_at": datetime.now(UTC).isoformat()},
         )
 
+    def fail_batch(self, batch_id: UUID, error: str) -> None:
+        current = self.get_batch(batch_id)
+        errors = list(current.get("errors") or [])
+        errors.append(error[:2000])
+        self._update_batch(
+            batch_id,
+            {
+                "status": "failed",
+                "errors": errors,
+                "finished_at": datetime.now(UTC).isoformat(),
+            },
+        )
+
     def is_cancelled(self, batch_id: UUID) -> bool:
         return self.get_batch(batch_id)["status"] == "cancelled"
 
