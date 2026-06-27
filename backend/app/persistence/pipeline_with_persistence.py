@@ -109,7 +109,8 @@ class PipelinePersistenceHook:
         except PersistenceError as exc:
             errors.append(str(exc))
 
-        final_status = "partial" if state.get("errors") else "completed"
+        critical_errors = state.get("critical_errors", state.get("errors", []))
+        final_status = "partial" if critical_errors else "completed"
         if not state.get("classification_output"):
             final_status = "failed" if not state.get("scraper_output") else "partial"
         try:
@@ -117,7 +118,11 @@ class PipelinePersistenceHook:
                 run_id,
                 "completed",
                 final_status,
-                extra_data={"errors": state.get("errors", [])},
+                extra_data={
+                    "errors": critical_errors,
+                    "warnings": state.get("warnings", []),
+                    "source_errors": state.get("source_errors", []),
+                },
             )
         except PersistenceError as exc:
             errors.append(str(exc))

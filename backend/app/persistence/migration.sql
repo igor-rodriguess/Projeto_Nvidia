@@ -89,12 +89,19 @@ create table if not exists nvidia_inception.pipeline_runs (
   current_stage text,
   trace_path text,
   errors jsonb not null default '[]'::jsonb,
+  warnings jsonb not null default '[]'::jsonb,
+  source_errors jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint pipeline_run_dates check (
     finished_at is null or started_at is null or finished_at >= started_at
   )
 );
+
+alter table nvidia_inception.pipeline_runs
+  add column if not exists warnings jsonb not null default '[]'::jsonb;
+alter table nvidia_inception.pipeline_runs
+  add column if not exists source_errors jsonb not null default '[]'::jsonb;
 
 create table if not exists nvidia_inception.search_queries (
   id uuid primary key default gen_random_uuid(),

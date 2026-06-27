@@ -109,6 +109,9 @@ class EnterprisePipeline:
             "input": pipeline_input.model_dump(mode="json"),
             "trace": {},
             "errors": [],
+            "warnings": [],
+            "source_errors": [],
+            "critical_errors": [],
         }
         if self.persistence_hook is not None:
             try:
@@ -227,9 +230,9 @@ class EnterprisePipeline:
     ) -> dict[str, Any]:
         if dependency not in state:
             message = f"Etapa {stage} não executada porque {dependency} está ausente"
-            state["errors"].append(message)
+            self._record_critical_error(state, message)
             state["trace"][stage] = StageTrace(
-                status="parcial",
+                status="falha",
                 duration_ms=0,
                 attempts=0,
                 error=message,
@@ -258,13 +261,13 @@ class EnterprisePipeline:
             cached = self.cache.get(cache_key)
             if cached is not None:
                 state[output_key] = cached
-                embedded_errors = _embedded_errors(cached)
-                state["errors"].extend(f"{stage}: {error}" for error in embedded_errors)
+                warnings, critical_issue = self._record_output_diagnostics(state, stage, cached)
                 state["trace"][stage] = StageTrace(
                     status="cache",
                     duration_ms=round((time.perf_counter() - started) * 1000, 2),
                     attempts=0,
                     output=cached,
+                    warnings=warnings,
                 ).model_dump(mode="json")
                 LOGGER.info("stage_cache_hit", stage=stage, startup=state["input"]["startup_name"])
                 self._notify_persistence_stage(state, stage, cached)
@@ -282,14 +285,14 @@ class EnterprisePipeline:
                 self.cache.set(cache_key, output)
             duration = round((time.perf_counter() - started) * 1000, 2)
             state[output_key] = output
-            embedded_errors = _embedded_errors(output)
-            state["errors"].extend(f"{stage}: {error}" for error in embedded_errors)
+            warnings, critical_issue = self._record_output_diagnostics(state, stage, output)
             state["trace"][stage] = StageTrace(
-                status="parcial" if embedded_errors else "completo",
+                status="parcial" if critical_issue else "completo",
                 duration_ms=duration,
                 attempts=attempts,
                 tokens_consumidos=_tokens_from_output(output),
                 output=output,
+                warnings=warnings,
             ).model_dump(mode="json")
             LOGGER.info(
                 "pipeline_stage_completed",
@@ -303,9 +306,9 @@ class EnterprisePipeline:
         except Exception as exc:
             duration = round((time.perf_counter() - started) * 1000, 2)
             message = f"{stage}: {exc}"
-            state["errors"].append(message)
+            self._record_critical_error(state, message)
             state["trace"][stage] = StageTrace(
-                status="parcial",
+                status="falha",
                 duration_ms=duration,
                 attempts=3,
                 error=str(exc),
@@ -324,9 +327,14 @@ class EnterprisePipeline:
         refinement = state.get("refinement_output")
         impact = state.get("impact_output")
         briefing = state.get("briefing_output") or {}
+        critical_errors = state["critical_errors"]
+        mandatory_complete = bool(classification and briefing.get("markdown"))
+        final_status = "completo"
+        if critical_errors:
+            final_status = "parcial" if mandatory_complete else "falha"
         output = {
             "startup": state["input"]["startup_name"],
-            "status": "parcial" if state["errors"] else "completo",
+            "status": final_status,
             "classificacao": classification.get("classificacao"),
             "nivel_maturidade": classification.get("nivel_maturidade"),
             "recomendacao": recommendation,
@@ -335,7 +343,10 @@ class EnterprisePipeline:
             "briefing_markdown": briefing.get("markdown"),
             "pipeline_run_id": state.get("_persistence", {}).get("run_id"),
             "trace": state["trace"],
-            "errors": state["errors"],
+            "errors": critical_errors,
+            "warnings": state["warnings"],
+            "source_errors": state["source_errors"],
+            "critical_errors": critical_errors,
         }
         return validate_contract(PipelineOutput, output).model_dump(mode="json")
 
@@ -359,8 +370,28 @@ class EnterprisePipeline:
         error: Exception,
     ) -> None:
         message = f"persistence:{stage}: {error}"
-        state["errors"].append(message)
+        EnterprisePipeline._record_critical_error(state, message)
         LOGGER.error("pipeline_persistence_degraded", stage=stage, error=str(error))
+
+    @staticmethod
+    def _record_critical_error(state: dict[str, Any], message: str) -> None:
+        state["critical_errors"].append(message)
+        state["errors"] = state["critical_errors"]
+
+    def _record_output_diagnostics(
+        self,
+        state: dict[str, Any],
+        stage: str,
+        output: dict[str, Any],
+    ) -> tuple[list[str], str | None]:
+        warnings = [f"{stage}: {error}" for error in _embedded_errors(output)]
+        state["warnings"].extend(warnings)
+        if stage in {"scraper", "evidence_validator"}:
+            state["source_errors"].extend(warnings)
+        critical_issue = _critical_output_issue(stage, output, state)
+        if critical_issue:
+            self._record_critical_error(state, critical_issue)
+        return warnings, critical_issue
 
 
 def create_pipeline(**kwargs: Any) -> Runnable[dict[str, Any], dict[str, Any]]:
@@ -404,3 +435,30 @@ def _embedded_errors(output: dict[str, Any]) -> list[str]:
     if output.get("status") == "falha" and not normalized:
         normalized.append("etapa retornou status falha")
     return normalized
+
+
+def _critical_output_issue(
+    stage: str,
+    output: dict[str, Any],
+    state: dict[str, Any],
+) -> str | None:
+    if output.get("status") == "falha":
+        return f"{stage}: etapa retornou status falha"
+    if stage == "scraper":
+        results = output.get("resultados_buscas") or []
+        pages = output.get("paginas_completas") or []
+        if not results and not pages:
+            return "scraper: nenhuma fonte utilizavel foi coletada"
+    if stage == "evidence_validator":
+        evidence = (output.get("evidencias_validadas") or []) + (
+            output.get("evidencias_medias") or []
+        )
+        if not evidence:
+            return "evidence_validator: nenhuma evidencia utilizavel foi validada"
+    classification = (state.get("classification_output") or {}).get("classificacao")
+    if classification and classification != "Non-AI":
+        if stage == "nvidia_recommender_rag" and not output.get("recomendacoes"):
+            return "nvidia_recommender_rag: nenhuma recomendacao fundamentada para startup com IA"
+        if stage == "impact_estimator" and not output.get("estimativas_impacto"):
+            return "impact_estimator: nenhuma estimativa foi produzida para startup com IA"
+    return None

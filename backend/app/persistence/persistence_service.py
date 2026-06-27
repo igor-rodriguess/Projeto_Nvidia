@@ -129,7 +129,14 @@ class PipelinePersistence:
                 "current_stage": stage,
                 "status": validated_status,
             }
-            allowed_extra = {"errors", "trace_path", "duration_ms", "finished_at"}
+            allowed_extra = {
+                "errors",
+                "warnings",
+                "source_errors",
+                "trace_path",
+                "duration_ms",
+                "finished_at",
+            }
             for key, value in (extra_data or {}).items():
                 if key in allowed_extra:
                     updates[key] = value

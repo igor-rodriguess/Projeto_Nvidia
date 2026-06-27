@@ -1,5 +1,5 @@
 from app.core.schemas import NVIDIARecommendationOutput
-from app.services.enterprise_pipeline import run_enterprise_pipeline
+from app.services.enterprise_pipeline import EnterprisePipeline, run_enterprise_pipeline
 from tests.test_scraper_agent import FakeSession
 
 
@@ -49,3 +49,47 @@ def test_enterprise_pipeline_returns_all_eight_trace_stages(monkeypatch, tmp_pat
     assert result["impacto_estimado"]["startup"] == "Clara Pagamentos"
     assert result["briefing_markdown"].startswith("# Briefing NVIDIA Inception")
     assert all("output" in stage for stage in result["trace"].values())
+
+
+def test_source_warning_does_not_become_critical_when_results_exist():
+    pipeline = object.__new__(EnterprisePipeline)
+    state = {
+        "warnings": [],
+        "source_errors": [],
+        "critical_errors": [],
+        "errors": [],
+    }
+    output = {
+        "status": "parcial",
+        "resultados_buscas": [
+            {"titulo": "Fonte", "url": "https://example.com", "snippet": "IA"}
+        ],
+        "paginas_completas": [],
+        "erros": [{"erro": "Uma fonte retornou 403"}],
+    }
+
+    warnings, critical = pipeline._record_output_diagnostics(state, "scraper", output)
+
+    assert warnings == ["scraper: Uma fonte retornou 403"]
+    assert state["source_errors"] == warnings
+    assert state["critical_errors"] == []
+    assert critical is None
+
+
+def test_missing_all_sources_is_a_critical_error():
+    pipeline = object.__new__(EnterprisePipeline)
+    state = {
+        "warnings": [],
+        "source_errors": [],
+        "critical_errors": [],
+        "errors": [],
+    }
+
+    _, critical = pipeline._record_output_diagnostics(
+        state,
+        "scraper",
+        {"status": "parcial", "resultados_buscas": [], "paginas_completas": [], "erros": []},
+    )
+
+    assert critical == "scraper: nenhuma fonte utilizavel foi coletada"
+    assert state["critical_errors"] == [critical]

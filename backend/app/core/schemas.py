@@ -399,6 +399,7 @@ class StageTrace(ContractModel):
     tokens_consumidos: int = Field(ge=0, default=0)
     output: dict[str, Any] | None = None
     error: str | None = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 class PipelineOutput(ContractModel):
@@ -413,6 +414,9 @@ class PipelineOutput(ContractModel):
     pipeline_run_id: str | None = None
     trace: dict[str, StageTrace]
     errors: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    source_errors: list[str] = Field(default_factory=list)
+    critical_errors: list[str] = Field(default_factory=list)
 
 
 def _ensure_absolute_url(value: str) -> None:

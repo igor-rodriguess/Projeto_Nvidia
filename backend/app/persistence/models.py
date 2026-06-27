@@ -50,6 +50,8 @@ class PipelineRun(PersistenceModel):
     current_stage: str | None = None
     trace_path: str | None = None
     errors: list[Any] = Field(default_factory=list)
+    warnings: list[Any] = Field(default_factory=list)
+    source_errors: list[Any] = Field(default_factory=list)
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
