@@ -35,10 +35,12 @@ class EnterprisePipeline:
         search_client: Any | None = None,
         firecrawl_client: Any | None = None,
         trafilatura_extractor: Any | None = None,
+        persistence_hook: Any | None = None,
     ) -> None:
         self.cache = cache or JsonFileCache()
         self.use_cache = use_cache
         self.retry_wait_multiplier = retry_wait_multiplier
+        self.persistence_hook = persistence_hook
         self.search_chain = create_search_planner_chain(enable_retry=False)
         self.scraper_chain = create_scraper_chain(
             session=session,
@@ -77,11 +79,17 @@ class EnterprisePipeline:
 
     def _initialize(self, payload: dict[str, Any]) -> dict[str, Any]:
         pipeline_input = validate_contract(PipelineInput, payload)
-        return {
+        state = {
             "input": pipeline_input.model_dump(mode="json"),
             "trace": {},
             "errors": [],
         }
+        if self.persistence_hook is not None:
+            try:
+                self.persistence_hook.initialize(state)
+            except Exception as exc:
+                self._record_persistence_error(state, "initialization", exc)
+        return state
 
     def _search_stage(self, state: dict[str, Any]) -> dict[str, Any]:
         return self._execute_stage(
@@ -186,6 +194,7 @@ class EnterprisePipeline:
                     output=cached,
                 ).model_dump(mode="json")
                 LOGGER.info("stage_cache_hit", stage=stage, startup=state["input"]["startup_name"])
+                self._notify_persistence_stage(state, stage, cached)
                 return state
 
         try:
@@ -217,6 +226,7 @@ class EnterprisePipeline:
                 result_count=_result_count(output),
                 tokens_consumidos=_tokens_from_output(output),
             )
+            self._notify_persistence_stage(state, stage, output)
         except Exception as exc:
             duration = round((time.perf_counter() - started) * 1000, 2)
             message = f"{stage}: {exc}"
@@ -231,6 +241,11 @@ class EnterprisePipeline:
         return state
 
     def _finalize(self, state: dict[str, Any]) -> dict[str, Any]:
+        if self.persistence_hook is not None:
+            try:
+                self.persistence_hook.finalize(state)
+            except Exception as exc:
+                self._record_persistence_error(state, "finalization", exc)
         classification = state.get("classification_output") or {}
         recommendation = state.get("recommendation_output")
         output = {
@@ -243,6 +258,29 @@ class EnterprisePipeline:
             "errors": state["errors"],
         }
         return validate_contract(PipelineOutput, output).model_dump(mode="json")
+
+    def _notify_persistence_stage(
+        self,
+        state: dict[str, Any],
+        stage: str,
+        output: dict[str, Any],
+    ) -> None:
+        if self.persistence_hook is None:
+            return
+        try:
+            self.persistence_hook.stage_completed(state, stage, output)
+        except Exception as exc:
+            self._record_persistence_error(state, stage, exc)
+
+    @staticmethod
+    def _record_persistence_error(
+        state: dict[str, Any],
+        stage: str,
+        error: Exception,
+    ) -> None:
+        message = f"persistence:{stage}: {error}"
+        state["errors"].append(message)
+        LOGGER.error("pipeline_persistence_degraded", stage=stage, error=str(error))
 
 
 def create_pipeline(**kwargs: Any) -> Runnable[dict[str, Any], dict[str, Any]]:

@@ -1,0 +1,243 @@
+from __future__ import annotations
+
+from types import SimpleNamespace
+from uuid import UUID, uuid4
+
+import pytest
+from pydantic import ValidationError
+
+from app.persistence.models import AIAssessment
+from app.persistence.persistence_service import PipelinePersistence
+
+
+class FakeQuery:
+    def __init__(self, database, table_name):
+        self.database = database
+        self.table_name = table_name
+        self.operation = "select"
+        self.payload = None
+        self.filters = []
+        self.limit_count = None
+        self.conflict_fields = []
+
+    def select(self, columns="*"):
+        self.operation = "select"
+        return self
+
+    def insert(self, payload):
+        self.operation = "insert"
+        self.payload = payload
+        return self
+
+    def upsert(self, payload, on_conflict=None):
+        self.operation = "upsert"
+        self.payload = payload
+        self.conflict_fields = (on_conflict or "").split(",") if on_conflict else []
+        return self
+
+    def update(self, payload):
+        self.operation = "update"
+        self.payload = payload
+        return self
+
+    def eq(self, field, value):
+        self.filters.append(("eq", field, str(value)))
+        return self
+
+    def ilike(self, field, value):
+        self.filters.append(("ilike", field, str(value)))
+        return self
+
+    def limit(self, count):
+        self.limit_count = count
+        return self
+
+    def execute(self):
+        rows = self.database.rows.setdefault(self.table_name, [])
+        if self.operation == "select":
+            selected = [row.copy() for row in rows if self._matches(row)]
+            if self.limit_count is not None:
+                selected = selected[: self.limit_count]
+            return SimpleNamespace(data=selected)
+        if self.operation == "insert":
+            inserted = self._insert_many(rows, self.payload)
+            return SimpleNamespace(data=inserted)
+        if self.operation == "upsert":
+            payloads = self.payload if isinstance(self.payload, list) else [self.payload]
+            output = []
+            for payload in payloads:
+                existing = next(
+                    (
+                        row
+                        for row in rows
+                        if self.conflict_fields
+                        and all(str(row.get(field)) == str(payload.get(field)) for field in self.conflict_fields)
+                    ),
+                    None,
+                )
+                if existing:
+                    existing.update(payload)
+                    output.append(existing.copy())
+                else:
+                    output.extend(self._insert_many(rows, payload))
+            return SimpleNamespace(data=output)
+        if self.operation == "update":
+            updated = []
+            for row in rows:
+                if self._matches(row):
+                    row.update(self.payload)
+                    updated.append(row.copy())
+            return SimpleNamespace(data=updated)
+        raise AssertionError(self.operation)
+
+    def _insert_many(self, rows, payload):
+        payloads = payload if isinstance(payload, list) else [payload]
+        inserted = []
+        for item in payloads:
+            row = {**item, "id": item.get("id") or str(uuid4())}
+            rows.append(row)
+            inserted.append(row.copy())
+        return inserted
+
+    def _matches(self, row):
+        for operator, field, value in self.filters:
+            current = str(row.get(field, ""))
+            if operator == "eq" and current != value:
+                return False
+            if operator == "ilike" and current.lower() != value.lower():
+                return False
+        return True
+
+
+class FakeDatabase:
+    def __init__(self):
+        self.rows = {}
+
+    def table(self, name):
+        return FakeQuery(self, name)
+
+
+class FakeBucket:
+    def __init__(self, files):
+        self.files = files
+
+    def upload(self, path, file, file_options=None):
+        self.files[path] = {"file": file, "options": file_options}
+        return {"path": path}
+
+
+class FakeStorage:
+    def __init__(self):
+        self.files = {}
+
+    def from_(self, bucket):
+        return FakeBucket(self.files.setdefault(bucket, {}))
+
+
+class FakeSupabase:
+    def __init__(self):
+        self.database = FakeDatabase()
+        self.storage = FakeStorage()
+        self.requested_schema = None
+
+    def schema(self, name):
+        self.requested_schema = name
+        return self.database
+
+
+def test_persistence_service_saves_complete_normalized_run():
+    client = FakeSupabase()
+    service = PipelinePersistence(client=client)
+
+    startup_id = service.save_startup(
+        {"nome": "Clara Pagamentos", "site_oficial": "https://clara.com.br"}
+    )
+    duplicate_id = service.save_startup(
+        {"nome": "Clara Pagamentos", "site_oficial": "https://clara.com.br"}
+    )
+    run_id = service.create_pipeline_run(startup_id)
+
+    assert startup_id == duplicate_id
+    assert client.requested_schema == "nvidia_inception"
+
+    assert service.save_queries(
+        run_id,
+        [{"consulta": "Clara IA", "camada": 3, "objetivo": "IA", "resultados_count": 2}],
+    ) == 1
+    assert service.save_evidences(
+        run_id,
+        [
+            {
+                "url": "https://clara.com.br/ia",
+                "tipo_fonte": "oficial",
+                "credibilidade": 0.7,
+                "trecho": "Clara usa machine learning.",
+                "score_confianca": 0.91,
+                "classificacao": "alta",
+                "contem_ia": True,
+            }
+        ],
+    ) == 1
+    assessment_id = service.save_assessment(
+        run_id,
+        {
+            "classificacao": "AI-enabled",
+            "nivel_maturidade": 3,
+            "confianca_classificacao": 0.8,
+            "tecnologias_utilizadas": {"frameworks": []},
+            "necessidades": ["latencia"],
+            "justificativa": "Evidências qualificadas.",
+            "evidencias_usadas": ["https://clara.com.br/ia"],
+        },
+    )
+    recommendation_id = service.save_recommendation(
+        run_id,
+        {
+            "startup": "Clara Pagamentos",
+            "recomendacoes": [{"tecnologia": "Triton", "fit_score": 0.86}],
+        },
+        [
+            {
+                "tecnologia": "Triton",
+                "trecho_doc": "Triton oferece inferência escalável.",
+                "url_doc": "https://docs.nvidia.com/triton",
+            }
+        ],
+    )
+    trace_path = service.upload_trace(run_id, {"search_planner": {"status": "completo"}})
+    service.update_stage(run_id, "completed", "completed", {"errors": []})
+
+    assert isinstance(assessment_id, UUID)
+    assert isinstance(recommendation_id, UUID)
+    assert trace_path == f"{run_id}.json"
+    assert trace_path in client.storage.files["pipeline-traces"]
+    assert client.database.rows["pipeline_runs"][0]["status"] == "completed"
+    assert client.database.rows["pipeline_runs"][0]["duration_ms"] >= 0
+    assert len(client.database.rows["recommendation_citations"]) == 1
+
+
+def test_non_ai_assessment_requires_maturity_zero():
+    with pytest.raises(ValidationError):
+        AIAssessment(
+            pipeline_run_id=uuid4(),
+            classificacao="Non-AI",
+            nivel_maturidade=2,
+            confianca_classificacao=0.8,
+            justificativa="Sem evidências.",
+        )
+
+
+def test_migration_contains_security_and_storage_requirements():
+    from pathlib import Path
+
+    sql = (Path(__file__).resolve().parents[1] / "app/persistence/migration.sql").read_text(
+        encoding="utf-8"
+    )
+
+    assert "create schema if not exists nvidia_inception" in sql.lower()
+    assert sql.lower().count("enable row level security") == 8
+    assert "to service_role" in sql
+    assert "pipeline-traces" in sql
+    assert "startups_nome_lower_uidx" in sql
+    assert "pgrst.db_schemas" in sql
+    assert "notify pgrst, 'reload schema'" in sql

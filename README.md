@@ -89,3 +89,12 @@ agente. Resultados intermediários são cacheados em `backend/data/cache/pipelin
 
 Mais detalhes estão em [docs/rag_architecture.md](docs/rag_architecture.md) e
 [docs/operations.md](docs/operations.md).
+
+## Persistência
+
+O Supabase PostgreSQL armazena startups, execuções, consultas, fontes, evidências,
+classificações e recomendações. Traces grandes ficam no bucket privado
+`pipeline-traces`; o Qdrant permanece dedicado à recuperação vetorial.
+
+As instruções e a migration estão em
+[backend/app/persistence/README.md](backend/app/persistence/README.md).

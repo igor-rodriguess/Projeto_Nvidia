@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 .env
 backend/data/cache/
+backend/data/curated/_pipeline_runs/
