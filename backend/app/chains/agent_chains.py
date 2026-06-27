@@ -10,6 +10,7 @@ from app.agents.evidence_validator_agent import validar_evidencias_scraper
 from app.agents.scraper_agent import executar_scraper_agent
 from app.agents.search_planner_agent import planejar_busca_ia_startup
 from app.agents.recommendation_agent import RecommendationAgent
+from app.agents.impact_estimator_agent import ImpactEstimatorAgent
 from app.core.contracts import validate_contract
 from app.core.schemas import (
     AIMaturityOutput,
@@ -20,6 +21,8 @@ from app.core.schemas import (
     RecommenderInput,
     RecommendationRefinementOutput,
     RecommendationRefinerInput,
+    ImpactEstimationOutput,
+    ImpactEstimatorInput,
     NVIDIARecommendationOutput,
     ScraperOutput,
     SearchPlanOutput,
@@ -125,6 +128,20 @@ def create_recommendation_refiner_chain(
         refiner_input = validate_contract(RecommendationRefinerInput, payload)
         output = refiner.refine(refiner_input)
         return validate_contract(RecommendationRefinementOutput, output).model_dump(mode="json")
+
+    return _maybe_with_retry(RunnableLambda(invoke), enable_retry)
+
+
+def create_impact_estimator_chain(
+    agent: ImpactEstimatorAgent | None = None,
+    enable_retry: bool = True,
+) -> Runnable[dict[str, Any], dict[str, Any]]:
+    estimator = agent or ImpactEstimatorAgent()
+
+    def invoke(payload: dict[str, Any]) -> dict[str, Any]:
+        estimator_input = validate_contract(ImpactEstimatorInput, payload)
+        output = estimator.estimate(estimator_input)
+        return validate_contract(ImpactEstimationOutput, output).model_dump(mode="json")
 
     return _maybe_with_retry(RunnableLambda(invoke), enable_retry)
 

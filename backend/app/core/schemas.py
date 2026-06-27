@@ -337,6 +337,45 @@ class RecommendationRefinementOutput(ContractModel):
     recomendacao_refinada: RefinedRecommendation
 
 
+class ImpactEstimatorInput(ContractModel):
+    classificacao_ia: AIMaturityOutput
+    recomendacao_refinada: RecommendationRefinementOutput
+    dados_adicionais: dict[str, Any] = Field(default_factory=dict)
+
+
+class TechnicalImpact(ContractModel):
+    latencia: str = Field(min_length=1)
+    custo: str = Field(min_length=1)
+    vazao: str = Field(min_length=1)
+    escalabilidade: str = Field(min_length=1)
+    governanca_seguranca: str = Field(min_length=1)
+
+
+class TechnologyImpactEstimate(ContractModel):
+    tecnologia: NVIDIATechnology
+    impacto_tecnico: TechnicalImpact
+    impacto_negocio: str = Field(min_length=1)
+    fontes_evidencia: list[str] = Field(default_factory=list)
+    confianca: Literal["alta", "media", "baixa"]
+    premissas: list[str] = Field(default_factory=list)
+
+    @field_validator("fontes_evidencia")
+    @classmethod
+    def validate_impact_urls(cls, values: list[str]) -> list[str]:
+        for value in values:
+            _ensure_absolute_url(value)
+        return values
+
+
+class ImpactEstimationOutput(ContractModel):
+    startup: str = Field(min_length=1)
+    estimativas_impacto: list[TechnologyImpactEstimate] = Field(default_factory=list)
+    indice_impacto_agregado: int = Field(ge=0, le=100)
+    kpis_sugeridos: list[str] = Field(default_factory=list)
+    incertezas: list[str] = Field(default_factory=list)
+    resumo_executivo: str = Field(min_length=1)
+
+
 class StageTrace(ContractModel):
     status: Literal["completo", "cache", "parcial", "falha"]
     duration_ms: float = Field(ge=0)
