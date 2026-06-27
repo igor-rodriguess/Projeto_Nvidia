@@ -95,3 +95,45 @@ def test_missing_all_sources_is_a_critical_error():
 
     assert critical == "scraper: nenhuma fonte utilizavel foi coletada"
     assert state["critical_errors"] == [critical]
+
+
+def test_pipeline_notifies_active_stage_before_execution():
+    events = []
+
+    class Hook:
+        def stage_started(self, state, stage):
+            events.append(("started", stage))
+
+        def stage_completed(self, state, stage, output):
+            events.append(("completed", stage))
+
+    class Cache:
+        def key_for(self, namespace, payload):
+            return "unused"
+
+    pipeline = object.__new__(EnterprisePipeline)
+    pipeline.cache = Cache()
+    pipeline.use_cache = False
+    pipeline.retry_wait_multiplier = 0
+    pipeline.persistence_hook = Hook()
+    state = {
+        "input": {"startup_name": "Teste"},
+        "trace": {},
+        "errors": [],
+        "warnings": [],
+        "source_errors": [],
+        "critical_errors": [],
+    }
+
+    pipeline._execute_stage(
+        state,
+        stage="scraper",
+        input_payload={},
+        output_key="scraper_output",
+        operation=lambda: {
+            "status": "completo",
+            "resultados_buscas": [{"url": "https://example.com"}],
+        },
+    )
+
+    assert events == [("started", "scraper"), ("completed", "scraper")]

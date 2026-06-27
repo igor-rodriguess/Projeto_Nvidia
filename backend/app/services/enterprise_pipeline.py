@@ -281,6 +281,7 @@ class EnterprisePipeline:
         operation: Callable[[], dict[str, Any]],
     ) -> dict[str, Any]:
         started = time.perf_counter()
+        self._notify_persistence_stage_started(state, stage)
         cache_key = self.cache.key_for(f"v1_{stage}", input_payload)
         if self.use_cache:
             cached = self.cache.get(cache_key)
@@ -340,6 +341,18 @@ class EnterprisePipeline:
             ).model_dump(mode="json")
             LOGGER.error("pipeline_stage_failed", stage=stage, duration_ms=duration, error=str(exc))
         return state
+
+    def _notify_persistence_stage_started(
+        self,
+        state: dict[str, Any],
+        stage: str,
+    ) -> None:
+        if self.persistence_hook is None:
+            return
+        try:
+            self.persistence_hook.stage_started(state, stage)
+        except Exception as exc:
+            self._record_persistence_error(state, f"{stage}:start", exc)
 
     def _finalize(self, state: dict[str, Any]) -> dict[str, Any]:
         if self.persistence_hook is not None:

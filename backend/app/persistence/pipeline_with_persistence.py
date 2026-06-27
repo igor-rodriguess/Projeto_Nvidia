@@ -100,6 +100,12 @@ class PipelinePersistenceHook:
         if errors:
             raise PersistenceError(" | ".join(errors))
 
+    def stage_started(self, state: dict[str, Any], stage: str) -> None:
+        """Expose the active stage before potentially slow network work begins."""
+        run_id = self._run_id(state)
+        if run_id is not None:
+            self.persistence.update_stage(run_id, stage, "running")
+
     def finalize(self, state: dict[str, Any]) -> None:
         """Upload the trace and mark the execution completed, partial, or failed."""
         run_id = self._run_id(state)
