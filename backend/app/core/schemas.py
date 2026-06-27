@@ -289,6 +289,54 @@ class RecommenderInput(ContractModel):
     classificacao_ia: AIMaturityOutput
 
 
+RecommendationPhase = Literal["curto_prazo", "medio_prazo", "longo_prazo"]
+ImplementationComplexity = Literal["baixa", "media", "alta"]
+
+
+class RecommendationRefinerInput(ContractModel):
+    classificacao_ia: AIMaturityOutput
+    recomendacao_rag: NVIDIARecommendationOutput
+    startup_profile: dict[str, Any] = Field(default_factory=dict)
+    evidencias_altas: list[ValidatedEvidence] = Field(default_factory=list)
+
+
+class PrioritizedTechnology(ContractModel):
+    tecnologia: NVIDIATechnology
+    ordem: int = Field(ge=1)
+    fase: RecommendationPhase
+    problema_resolvido: str = Field(min_length=1)
+    beneficio: str = Field(min_length=1)
+    dependencias: list[str] = Field(default_factory=list)
+    riscos: str = Field(min_length=1)
+    complexidade: ImplementationComplexity
+    fontes_evidencia: list[str] = Field(default_factory=list)
+
+    @field_validator("fontes_evidencia")
+    @classmethod
+    def validate_evidence_urls(cls, values: list[str]) -> list[str]:
+        for value in values:
+            _ensure_absolute_url(value)
+        return values
+
+
+class RoadmapPhase(ContractModel):
+    tecnologias: list[NVIDIATechnology] = Field(default_factory=list)
+    acoes: list[str] = Field(default_factory=list)
+
+
+class RefinedRecommendation(ContractModel):
+    tecnologias_priorizadas: list[PrioritizedTechnology] = Field(default_factory=list)
+    roadmap: dict[RecommendationPhase, RoadmapPhase]
+    fit_score: float = Field(ge=0, le=1)
+    alertas: list[str] = Field(default_factory=list)
+    perguntas_startup: list[str] = Field(default_factory=list)
+
+
+class RecommendationRefinementOutput(ContractModel):
+    startup: str = Field(min_length=1)
+    recomendacao_refinada: RefinedRecommendation
+
+
 class StageTrace(ContractModel):
     status: Literal["completo", "cache", "parcial", "falha"]
     duration_ms: float = Field(ge=0)

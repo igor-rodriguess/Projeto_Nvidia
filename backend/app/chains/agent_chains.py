@@ -9,6 +9,7 @@ from app.agents.ai_maturity_classifier_agent import classificar_maturidade_ia
 from app.agents.evidence_validator_agent import validar_evidencias_scraper
 from app.agents.scraper_agent import executar_scraper_agent
 from app.agents.search_planner_agent import planejar_busca_ia_startup
+from app.agents.recommendation_agent import RecommendationAgent
 from app.core.contracts import validate_contract
 from app.core.schemas import (
     AIMaturityOutput,
@@ -17,6 +18,8 @@ from app.core.schemas import (
     MaturityClassifierInput,
     PipelineInput,
     RecommenderInput,
+    RecommendationRefinementOutput,
+    RecommendationRefinerInput,
     NVIDIARecommendationOutput,
     ScraperOutput,
     SearchPlanOutput,
@@ -108,6 +111,20 @@ def create_recommender_chain(
         recommender_input = validate_contract(RecommenderInput, payload)
         output = rag.recommend(recommender_input.classificacao_ia)
         return validate_contract(NVIDIARecommendationOutput, output).model_dump(mode="json")
+
+    return _maybe_with_retry(RunnableLambda(invoke), enable_retry)
+
+
+def create_recommendation_refiner_chain(
+    agent: RecommendationAgent | None = None,
+    enable_retry: bool = True,
+) -> Runnable[dict[str, Any], dict[str, Any]]:
+    refiner = agent or RecommendationAgent()
+
+    def invoke(payload: dict[str, Any]) -> dict[str, Any]:
+        refiner_input = validate_contract(RecommendationRefinerInput, payload)
+        output = refiner.refine(refiner_input)
+        return validate_contract(RecommendationRefinementOutput, output).model_dump(mode="json")
 
     return _maybe_with_retry(RunnableLambda(invoke), enable_retry)
 
