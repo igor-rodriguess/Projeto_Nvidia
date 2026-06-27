@@ -24,7 +24,7 @@ class BriefingGeneratorAgent:
         name = maturity.startup
         location = _location(profile)
         evidence_summary, evidence_sources = _evidence_summary(data.validacao_evidencias)
-        sources = _all_sources(evidence_sources, impact)
+        sources = _all_sources(evidence_sources, impact, data.inception_fit)
 
         lines = [
             f"# Briefing NVIDIA Inception - {name}",
@@ -44,22 +44,24 @@ class BriefingGeneratorAgent:
             f"confianca {maturity.confianca_classificacao:.0%}",
             f"- **Evidencias:** {evidence_summary}",
             "",
-            "## 3. Diagnostico Tecnico",
+            "## 3. Aderencia ao NVIDIA Inception",
         ]
+        lines.extend(_inception_fit_lines(data.inception_fit))
+        lines.extend(["", "## 4. Diagnostico Tecnico"])
         needs = maturity.necessidades_limitacoes or ["Nenhuma limitacao confirmada nas evidencias."]
         lines.extend(f"- {_clean(item)}" for item in needs[:5])
         lines.append(
             "- Oportunidade NVIDIA: validar as tecnologias recomendadas em provas de conceito "
             "com baseline, criterio de aceite e fonte documental."
         )
-        lines.extend(["", "## 4. Recomendacao NVIDIA", "", _recommendation_table(refined), ""])
-        lines.extend(["## 5. Roadmap Sugerido"])
+        lines.extend(["", "## 5. Recomendacao NVIDIA", "", _recommendation_table(refined), ""])
+        lines.extend(["## 6. Roadmap Sugerido"])
         lines.extend(_roadmap_lines(refined.roadmap))
-        lines.extend(["", "## 6. Impacto Estimado"])
+        lines.extend(["", "## 7. Impacto Estimado"])
         lines.extend(_impact_lines(impact))
-        lines.extend(["", "## 7. Proximas Acoes"])
+        lines.extend(["", "## 8. Proximas Acoes"])
         lines.extend(_next_actions(refined.perguntas_startup, refined.tecnologias_priorizadas))
-        lines.extend(["", "## 8. Apendice: Evidencias-Chave"])
+        lines.extend(["", "## 9. Apendice: Evidencias-Chave"])
         lines.extend(f"- {source}" for source in sources[:10])
         if not sources:
             lines.append("- Nenhuma URL de evidencia disponivel; confirmar fontes antes do contato.")
@@ -100,6 +102,32 @@ def _evidence_summary(validation: Any | None) -> tuple[str, list[str]]:
     quality = validation.resumo_consolidado.nota_geral_qualidade_evidencias
     summary = f"{len(high)} alta(s), {len(medium)} media(s), qualidade geral {quality:.0%}."
     return summary, [item.url for item in high + medium]
+
+
+def _inception_fit_lines(fit: Any | None) -> list[str]:
+    if fit is None:
+        return [
+            "- **Elegibilidade:** unknown. Diagnostico de aderencia nao executado.",
+            "- **Proximo passo:** confirmar os criterios oficiais diretamente com a startup.",
+        ]
+    lines = [
+        f"- **Elegibilidade:** {fit.eligibility_status}. {_clean(fit.eligibility_justification)}",
+        f"- **Estagio:** {fit.startup_stage}. {_clean(fit.stage_justification)}",
+    ]
+    identified = [item.need for item in fit.needs if item.status == "identified"]
+    lines.append(
+        "- **Necessidades identificadas:** "
+        + (", ".join(identified) if identified else "nenhuma confirmada nas evidencias")
+        + "."
+    )
+    for match in fit.benefit_matches[:3]:
+        lines.append(
+            f"- **Beneficio {match.match_status}:** {_clean(match.benefit)}. "
+            f"{_clean(match.justification)}"
+        )
+    if fit.open_questions:
+        lines.append("- **Lacuna a confirmar:** " + _clean(fit.open_questions[0]))
+    return lines
 
 
 def _recommendation_table(refined: Any) -> str:
@@ -162,10 +190,13 @@ def _next_actions(questions: list[str], technologies: list[Any]) -> list[str]:
     return lines
 
 
-def _all_sources(evidence_sources: list[str], impact: Any) -> list[str]:
+def _all_sources(evidence_sources: list[str], impact: Any, inception_fit: Any | None) -> list[str]:
     sources = list(evidence_sources)
     for estimate in impact.estimativas_impacto:
         sources.extend(estimate.fontes_evidencia)
+    if inception_fit:
+        for match in inception_fit.benefit_matches:
+            sources.extend(match.source_urls)
     return list(dict.fromkeys(sources))
 
 

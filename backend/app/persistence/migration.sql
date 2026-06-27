@@ -166,6 +166,17 @@ create table if not exists nvidia_inception.ai_assessments (
   )
 );
 
+create table if not exists nvidia_inception.inception_fit_assessments (
+  id uuid primary key default gen_random_uuid(),
+  pipeline_run_id uuid not null unique references nvidia_inception.pipeline_runs(id) on delete cascade,
+  eligibility_status text not null
+    check (eligibility_status in ('eligible', 'ineligible', 'unknown')),
+  startup_stage text not null
+    check (startup_stage in ('early', 'growth', 'scale', 'unknown')),
+  fit_json jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists nvidia_inception.nvidia_recommendations (
   id uuid primary key default gen_random_uuid(),
   pipeline_run_id uuid not null unique references nvidia_inception.pipeline_runs(id) on delete cascade,
@@ -369,6 +380,7 @@ alter table nvidia_inception.search_queries enable row level security;
 alter table nvidia_inception.sources enable row level security;
 alter table nvidia_inception.evidences enable row level security;
 alter table nvidia_inception.ai_assessments enable row level security;
+alter table nvidia_inception.inception_fit_assessments enable row level security;
 alter table nvidia_inception.nvidia_recommendations enable row level security;
 alter table nvidia_inception.recommendation_citations enable row level security;
 alter table nvidia_inception.recommendation_refinements enable row level security;
@@ -386,7 +398,7 @@ declare
 begin
   foreach table_name in array array[
     'startups', 'pipeline_runs', 'search_queries', 'sources', 'evidences',
-    'ai_assessments', 'nvidia_recommendations', 'recommendation_citations',
+    'ai_assessments', 'inception_fit_assessments', 'nvidia_recommendations', 'recommendation_citations',
     'recommendation_refinements', 'impact_estimates', 'executive_briefings',
     'batch_runs', 'batch_items', 'batch_dead_letters', 'web_content_cache',
     'external_api_usage'

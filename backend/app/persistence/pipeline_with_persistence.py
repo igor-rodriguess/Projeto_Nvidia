@@ -75,6 +75,8 @@ class PipelinePersistenceHook:
                 self.persistence.save_evidences(run_id, _evidences_from_validator(output))
             elif stage == "ai_maturity_classifier":
                 self.persistence.save_assessment(run_id, _assessment_from_classifier(output))
+            elif stage == "inception_fit":
+                self.persistence.save_inception_fit(run_id, output)
             elif stage == "nvidia_recommender_rag":
                 self.persistence.save_recommendation(
                     run_id,

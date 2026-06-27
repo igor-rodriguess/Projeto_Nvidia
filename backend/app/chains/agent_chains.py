@@ -11,6 +11,7 @@ from app.agents.scraper_agent import executar_scraper_agent
 from app.agents.search_planner_agent import planejar_busca_ia_startup
 from app.agents.recommendation_agent import RecommendationAgent
 from app.agents.impact_estimator_agent import ImpactEstimatorAgent
+from app.agents.inception_fit_agent import InceptionFitAgent
 from app.agents.briefing_generator_agent import BriefingGeneratorAgent
 from app.core.contracts import validate_contract
 from app.core.schemas import (
@@ -24,6 +25,8 @@ from app.core.schemas import (
     RecommendationRefinerInput,
     ImpactEstimationOutput,
     ImpactEstimatorInput,
+    InceptionFitInput,
+    InceptionFitOutput,
     BriefingGeneratorInput,
     ExecutiveBriefingOutput,
     NVIDIARecommendationOutput,
@@ -105,6 +108,20 @@ def create_classifier_chain(
             classifier_input.validacao.model_dump(mode="json")
         )
         return validate_contract(AIMaturityOutput, output).model_dump(mode="json")
+
+    return _maybe_with_retry(RunnableLambda(invoke), enable_retry)
+
+
+def create_inception_fit_chain(
+    agent: InceptionFitAgent | None = None,
+    enable_retry: bool = True,
+) -> Runnable[dict[str, Any], dict[str, Any]]:
+    fit_agent = agent or InceptionFitAgent()
+
+    def invoke(payload: dict[str, Any]) -> dict[str, Any]:
+        fit_input = validate_contract(InceptionFitInput, payload)
+        output = fit_agent.assess(fit_input)
+        return validate_contract(InceptionFitOutput, output).model_dump(mode="json")
 
     return _maybe_with_retry(RunnableLambda(invoke), enable_retry)
 

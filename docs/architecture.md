@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-A solução usa uma pipeline multiagente orquestrada com LangChain Runnables. Os oito
+A solução usa uma pipeline multiagente orquestrada com LangChain Runnables. Os nove
 estágios operacionais são sequenciais, modulares, cacheáveis e observáveis.
 
 ## Pipeline Operacional
@@ -13,6 +13,7 @@ Entrada da startup
   -> Scraper Agent
   -> Evidence Validator Agent
   -> AI Maturity Classifier Agent
+  -> Inception Fit Agent
   -> NVIDIA Recommender RAG
   -> Recommendation Agent
   -> Impact Estimator Agent

@@ -36,6 +36,7 @@ Cubo Itaú
   -> Scraper Agent
   -> Evidence Validator Agent
   -> AI Maturity Classifier Agent
+  -> Inception Fit Agent
   -> NVIDIA Recommender RAG
   -> Recommendation Agent
   -> Impact Estimator Agent
@@ -81,7 +82,7 @@ Para ingerir a documentação oficial NVIDIA:
 python scripts/ingest_nvidia_knowledge.py
 ```
 
-Para executar os oito estágios de investigação e recomendação:
+Para executar os nove estágios de investigação e recomendação:
 
 ```bash
 python scripts/run_enterprise_pipeline.py "Nome da Startup" "https://startup.com"

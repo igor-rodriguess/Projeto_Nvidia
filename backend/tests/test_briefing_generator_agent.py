@@ -94,8 +94,10 @@ def test_briefing_generator_renders_required_sections_and_sources():
 
     assert markdown.startswith("# Briefing NVIDIA Inception - Startup Teste")
     assert "**Data:** 2026-06-27" in markdown
-    for section in range(1, 9):
+    for section in range(1, 10):
         assert f"## {section}." in markdown
+    assert "## 3. Aderencia ao NVIDIA Inception" in markdown
+    assert "Elegibilidade:** unknown" in markdown
     assert "| Triton | Curto Prazo |" in markdown
     assert "https://docs.nvidia.com/triton/benchmark" in markdown
     assert "77/100" in markdown

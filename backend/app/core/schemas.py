@@ -211,6 +211,59 @@ class AIMaturityOutput(ContractModel):
         return self
 
 
+InceptionEligibility = Literal["eligible", "ineligible", "unknown"]
+StartupStage = Literal["early", "growth", "scale", "unknown"]
+InceptionNeed = Literal[
+    "credits", "technical_support", "infrastructure", "go_to_market", "networking"
+]
+
+
+class InceptionFitInput(ContractModel):
+    startup_profile: dict[str, Any]
+    classificacao_ia: AIMaturityOutput
+    validacao_evidencias: EvidenceValidationOutput | None = None
+
+
+class InceptionNeedSignal(ContractModel):
+    need: InceptionNeed
+    status: Literal["identified", "not_identified", "unknown"]
+    justification: str = Field(min_length=1)
+    evidence_urls: list[str] = Field(default_factory=list)
+
+    @field_validator("evidence_urls")
+    @classmethod
+    def validate_evidence_urls(cls, values: list[str]) -> list[str]:
+        for value in values:
+            _ensure_absolute_url(value)
+        return values
+
+
+class InceptionBenefitMatch(ContractModel):
+    benefit: str = Field(min_length=1)
+    match_status: Literal["strong", "possible", "unknown"]
+    justification: str = Field(min_length=1)
+    source_urls: list[str] = Field(min_length=1)
+    confidence: float = Field(ge=0, le=1)
+
+    @field_validator("source_urls")
+    @classmethod
+    def validate_source_urls(cls, values: list[str]) -> list[str]:
+        for value in values:
+            _ensure_absolute_url(value)
+        return values
+
+
+class InceptionFitOutput(ContractModel):
+    startup: str = Field(min_length=1)
+    eligibility_status: InceptionEligibility
+    eligibility_justification: str = Field(min_length=1)
+    startup_stage: StartupStage
+    stage_justification: str = Field(min_length=1)
+    needs: list[InceptionNeedSignal] = Field(min_length=5, max_length=5)
+    benefit_matches: list[InceptionBenefitMatch] = Field(default_factory=list)
+    open_questions: list[str] = Field(default_factory=list)
+
+
 class KnowledgeMetadata(ContractModel):
     tecnologia: NVIDIATechnology
     tipo: Literal["documentacao", "whitepaper", "blog", "case_study", "github"]
@@ -384,6 +437,7 @@ class BriefingGeneratorInput(ContractModel):
     recomendacao_refinada: RecommendationRefinementOutput
     estimativa_impacto: ImpactEstimationOutput
     validacao_evidencias: EvidenceValidationOutput | None = None
+    inception_fit: InceptionFitOutput | None = None
     responsavel: str = "Time NVIDIA Inception Brasil"
 
 
@@ -407,6 +461,7 @@ class PipelineOutput(ContractModel):
     status: Literal["completo", "parcial", "falha"]
     classificacao: AIClassification | None = None
     nivel_maturidade: int | None = Field(default=None, ge=0, le=5)
+    inception_fit: InceptionFitOutput | None = None
     recomendacao: NVIDIARecommendationOutput | None = None
     recomendacao_refinada: RecommendationRefinementOutput | None = None
     impacto_estimado: ImpactEstimationOutput | None = None

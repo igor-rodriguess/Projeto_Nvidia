@@ -18,6 +18,7 @@ from app.persistence.models import (
     EvidenceInput,
     ExecutiveBriefingRecord,
     ImpactEstimateRecord,
+    InceptionFitAssessment,
     NVIDIARecommendation,
     PipelineRun,
     RecommendationCitation,
@@ -248,6 +249,25 @@ class PipelinePersistence:
             raise
         except Exception as exc:
             raise self._handle_error("save_assessment", exc, run_id=run_id) from exc
+
+    def save_inception_fit(self, run_id: UUID, fit: dict[str, Any]) -> UUID:
+        """Persist the Inception fit diagnosis separately from AI maturity."""
+        try:
+            model = InceptionFitAssessment(
+                pipeline_run_id=run_id,
+                eligibility_status=fit["eligibility_status"],
+                startup_stage=fit["startup_stage"],
+                fit_json=fit,
+            )
+            return self._upsert_run_artifact(
+                "inception_fit_assessments",
+                model.model_dump(mode="json", exclude={"id", "created_at"}),
+                "inception_fit_assessments.upsert",
+            )
+        except PersistenceError:
+            raise
+        except Exception as exc:
+            raise self._handle_error("save_inception_fit", exc, run_id=run_id) from exc
 
     def save_recommendation(
         self,

@@ -21,6 +21,7 @@ O schema `nvidia_inception` contém:
 - `sources`: URLs, tipo, credibilidade e acessibilidade.
 - `evidences`: evidências válidas, médias e descartadas.
 - `ai_assessments`: classificação e maturidade de IA.
+- `inception_fit_assessments`: elegibilidade, estágio, necessidades e benefícios do programa.
 - `nvidia_recommendations`: saída consolidada do RAG.
 - `recommendation_citations`: documentos que fundamentam a recomendação.
 - `recommendation_refinements`: tecnologias priorizadas, roadmap e fit final.

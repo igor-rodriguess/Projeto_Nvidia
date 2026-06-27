@@ -12,6 +12,7 @@ from app.chains.agent_chains import (
     create_classifier_chain,
     create_evidence_validator_chain,
     create_impact_estimator_chain,
+    create_inception_fit_chain,
     create_recommendation_refiner_chain,
     create_recommender_chain,
     create_scraper_chain,
@@ -19,6 +20,7 @@ from app.chains.agent_chains import (
 )
 from app.agents.briefing_generator_agent import BriefingGeneratorAgent
 from app.agents.impact_estimator_agent import ImpactEstimatorAgent
+from app.agents.inception_fit_agent import InceptionFitAgent
 from app.agents.recommendation_agent import RecommendationAgent
 from app.core.cache import JsonFileCache
 from app.core.contracts import validate_contract
@@ -45,6 +47,7 @@ class EnterprisePipeline:
         recommendation_agent: RecommendationAgent | None = None,
         impact_estimator_agent: ImpactEstimatorAgent | None = None,
         briefing_generator_agent: BriefingGeneratorAgent | None = None,
+        inception_fit_agent: InceptionFitAgent | None = None,
         web_cache: Any | None = None,
     ) -> None:
         self.cache = cache or JsonFileCache()
@@ -67,6 +70,10 @@ class EnterprisePipeline:
             enable_retry=False,
         )
         self.classifier_chain = create_classifier_chain(enable_retry=False)
+        self.inception_fit_chain = create_inception_fit_chain(
+            agent=inception_fit_agent,
+            enable_retry=False,
+        )
         rag_recommender = recommender or NVIDIARecommenderRAG()
         shared_store = getattr(rag_recommender, "store", None)
         self.recommender_chain = create_recommender_chain(
@@ -98,6 +105,7 @@ class EnterprisePipeline:
             | RunnableLambda(self._scraper_stage)
             | RunnableLambda(self._validator_stage)
             | RunnableLambda(self._classifier_stage)
+            | RunnableLambda(self._inception_fit_stage)
             | RunnableLambda(self._recommender_stage)
             | RunnableLambda(self._recommendation_refiner_stage)
             | RunnableLambda(self._impact_estimator_stage)
@@ -174,6 +182,20 @@ class EnterprisePipeline:
             operation=lambda payload: self.recommender_chain.invoke(payload),
         )
 
+    def _inception_fit_stage(self, state: dict[str, Any]) -> dict[str, Any]:
+        return self._execute_dependent_stage(
+            state,
+            stage="inception_fit",
+            dependency="classification_output",
+            output_key="inception_fit_output",
+            input_builder=lambda: {
+                "startup_profile": state["input"],
+                "classificacao_ia": state["classification_output"],
+                "validacao_evidencias": state.get("validation_output"),
+            },
+            operation=lambda payload: self.inception_fit_chain.invoke(payload),
+        )
+
     def _recommendation_refiner_stage(self, state: dict[str, Any]) -> dict[str, Any]:
         return self._execute_dependent_stage(
             state,
@@ -217,6 +239,7 @@ class EnterprisePipeline:
                 "recomendacao_refinada": state["refinement_output"],
                 "estimativa_impacto": state["impact_output"],
                 "validacao_evidencias": state.get("validation_output"),
+                "inception_fit": state.get("inception_fit_output"),
             },
             operation=lambda payload: self.briefing_generator_chain.invoke(payload),
         )
@@ -339,6 +362,7 @@ class EnterprisePipeline:
             "status": final_status,
             "classificacao": classification.get("classificacao"),
             "nivel_maturidade": classification.get("nivel_maturidade"),
+            "inception_fit": state.get("inception_fit_output"),
             "recomendacao": recommendation,
             "recomendacao_refinada": refinement,
             "impacto_estimado": impact,

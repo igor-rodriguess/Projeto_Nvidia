@@ -3,7 +3,8 @@
 ## Objetivo
 
 O backend transforma a base CURATED do Cubo em trabalhos duráveis. Cada startup é
-processada pela pipeline de oito estágios e recebe classificação, recomendação,
+processada pela pipeline de nove estágios e recebe classificação, aderência ao
+NVIDIA Inception, recomendação,
 impacto e briefing. O Supabase guarda o progresso por lote e por item, permitindo
 retomar uma execução interrompida.
 

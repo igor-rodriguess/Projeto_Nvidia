@@ -194,6 +194,19 @@ def test_persistence_service_saves_complete_normalized_run():
             "evidencias_usadas": ["https://clara.com.br/ia"],
         },
     )
+    inception_fit_id = service.save_inception_fit(
+        run_id,
+        {
+            "startup": "Clara Pagamentos",
+            "eligibility_status": "unknown",
+            "eligibility_justification": "Dados insuficientes.",
+            "startup_stage": "unknown",
+            "stage_justification": "Rodada nao informada.",
+            "needs": [],
+            "benefit_matches": [],
+            "open_questions": ["Confirmar elegibilidade."],
+        },
+    )
     recommendation_id = service.save_recommendation(
         run_id,
         {
@@ -231,6 +244,7 @@ def test_persistence_service_saves_complete_normalized_run():
     service.update_stage(run_id, "completed", "completed", {"errors": []})
 
     assert isinstance(assessment_id, UUID)
+    assert isinstance(inception_fit_id, UUID)
     assert isinstance(recommendation_id, UUID)
     assert isinstance(refinement_id, UUID)
     assert isinstance(impact_id, UUID)
@@ -243,6 +257,7 @@ def test_persistence_service_saves_complete_normalized_run():
     assert client.database.rows["recommendation_refinements"][0]["fit_score"] == 0.84
     assert client.database.rows["impact_estimates"][0]["aggregate_index"] == 76
     assert client.database.rows["executive_briefings"][0]["markdown"].startswith("# Briefing")
+    assert client.database.rows["inception_fit_assessments"][0]["eligibility_status"] == "unknown"
 
 
 def test_non_ai_assessment_requires_maturity_zero():
@@ -282,7 +297,7 @@ def test_migration_contains_security_and_storage_requirements():
     )
 
     assert "create schema if not exists nvidia_inception" in sql.lower()
-    assert sql.lower().count("enable row level security") == 16
+    assert sql.lower().count("enable row level security") == 17
     assert "web_content_cache" in sql
     assert "external_api_usage" in sql
     assert "to service_role" in sql

@@ -145,6 +145,17 @@ class AIAssessment(PersistenceModel):
         return self
 
 
+class InceptionFitAssessment(PersistenceModel):
+    """Evidence-aware fit between a startup and the NVIDIA Inception program."""
+
+    id: UUID | None = None
+    pipeline_run_id: UUID
+    eligibility_status: Literal["eligible", "ineligible", "unknown"]
+    startup_stage: Literal["early", "growth", "scale", "unknown"]
+    fit_json: dict[str, Any]
+    created_at: datetime | None = None
+
+
 class NVIDIARecommendation(PersistenceModel):
     """Consolidated recommendation payload returned by the NVIDIA RAG."""
 
