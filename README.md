@@ -115,3 +115,10 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 A documentação interativa fica em `http://127.0.0.1:8000/docs`. O guia de endpoints,
 CLI e retomada está em [docs/backend_api.md](docs/backend_api.md).
+
+Os endpoints de negócio usam `X-API-Key`, e o processamento longo roda em um worker
+separado. Para iniciar API, worker, Qdrant e SearXNG em containers:
+
+```bash
+docker compose --profile backend up -d --build
+```

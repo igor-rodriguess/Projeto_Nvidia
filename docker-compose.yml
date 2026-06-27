@@ -22,5 +22,47 @@ services:
       - ./infra/searxng/settings.yml:/etc/searxng/settings.yml:ro
     restart: unless-stopped
 
+  api:
+    profiles: ["backend"]
+    build:
+      context: ./backend
+    container_name: nvidia-ai-radar-api
+    env_file:
+      - ./backend/.env
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      SEARXNG_BASE_URL: http://searxng:8080
+    command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    depends_on:
+      - qdrant
+      - searxng
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  worker:
+    profiles: ["backend"]
+    build:
+      context: ./backend
+    container_name: nvidia-ai-radar-worker
+    env_file:
+      - ./backend/.env
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      SEARXNG_BASE_URL: http://searxng:8080
+    command: ["python", "scripts/run_batch_worker.py", "--poll-seconds", "5"]
+    depends_on:
+      - qdrant
+      - searxng
+    volumes:
+      - backend_cache:/app/data/cache
+    restart: unless-stopped
+
 volumes:
   qdrant_data:
+  backend_cache:
