@@ -45,6 +45,7 @@ class EnterprisePipeline:
         recommendation_agent: RecommendationAgent | None = None,
         impact_estimator_agent: ImpactEstimatorAgent | None = None,
         briefing_generator_agent: BriefingGeneratorAgent | None = None,
+        web_cache: Any | None = None,
     ) -> None:
         self.cache = cache or JsonFileCache()
         self.use_cache = use_cache
@@ -58,6 +59,7 @@ class EnterprisePipeline:
             firecrawl_client=firecrawl_client,
             trafilatura_extractor=trafilatura_extractor,
             enable_retry=False,
+            web_cache=web_cache,
         )
         self.validator_chain = create_evidence_validator_chain(
             session=session,

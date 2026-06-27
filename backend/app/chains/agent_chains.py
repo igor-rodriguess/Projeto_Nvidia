@@ -60,6 +60,7 @@ def create_scraper_chain(
     firecrawl_client: Any | None = None,
     trafilatura_extractor: Any | None = None,
     enable_retry: bool = True,
+    web_cache: Any | None = None,
 ) -> Runnable[dict[str, Any], dict[str, Any]]:
     def invoke(payload: dict[str, Any]) -> dict[str, Any]:
         plan = validate_contract(SearchPlanOutput, payload)
@@ -70,6 +71,7 @@ def create_scraper_chain(
             search_client=search_client,
             firecrawl_client=firecrawl_client,
             trafilatura_extractor=trafilatura_extractor,
+            web_cache=web_cache,
         )
         return validate_contract(ScraperOutput, output).model_dump(mode="json")
 

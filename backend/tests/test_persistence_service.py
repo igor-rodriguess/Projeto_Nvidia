@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from app.persistence.models import AIAssessment
 from app.persistence.persistence_service import PipelinePersistence
+from app.persistence.web_cache import SupabaseWebContentCache
 
 
 class FakeQuery:
@@ -255,6 +256,24 @@ def test_non_ai_assessment_requires_maturity_zero():
         )
 
 
+def test_web_content_cache_persists_content_and_usage():
+    client = FakeSupabase()
+    persistence = PipelinePersistence(client=client)
+    cache = SupabaseWebContentCache(persistence, ttl_seconds=60)
+    url = "https://example.com/tecnologia"
+    content = {"url": url, "conteudo_markdown": "# Tecnologia"}
+
+    assert cache.get(url) is None
+    cache.set(url, content)
+    cache.record_usage(url, cache_hit=False, success=True, estimated_cost_usd=0.01)
+
+    assert cache.get(url) == content
+    usage = client.database.rows["external_api_usage"][0]
+    assert usage["provider"] == "firecrawl"
+    assert usage["source_domain"] == "example.com"
+    assert usage["estimated_cost_usd"] == 0.01
+
+
 def test_migration_contains_security_and_storage_requirements():
     from pathlib import Path
 
@@ -263,7 +282,9 @@ def test_migration_contains_security_and_storage_requirements():
     )
 
     assert "create schema if not exists nvidia_inception" in sql.lower()
-    assert sql.lower().count("enable row level security") == 14
+    assert sql.lower().count("enable row level security") == 16
+    assert "web_content_cache" in sql
+    assert "external_api_usage" in sql
     assert "to service_role" in sql
     assert "pipeline-traces" in sql
     assert "startups_nome_lower_uidx" in sql

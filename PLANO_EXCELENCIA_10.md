@@ -143,3 +143,17 @@ para cumprir uma duração arbitrária.
 - Mudanças em classificação, RAG ou prompts exigem reexecução do conjunto ouro.
 - A definição de pronto para produção exige duas semanas sem incidente crítico no
   ambiente remoto e um exercício de restauração concluído.
+
+## Registro de Execução
+
+Atualizado em 27 de junho de 2026:
+
+- Concluído: taxonomia de warnings, erros de fonte e erros críticos.
+- Concluído: recalibração de status e reprocessamento controlado.
+- Concluído: gerador determinístico da amostra de aceitação.
+- Concluído: scan Gitleaks do histórico, sem achados versionados.
+- Concluído: lease com heartbeat, tentativas limitadas, DLQ e replay.
+- Parcial: cache Firecrawl de sete dias, limite por startup e ledger de custo estão
+  ativos; limite agregado por lote e alerta de 80% ainda precisam ser implementados.
+- Pendente externo: rotação das chaves Supabase e Firecrawl pelo proprietário.
+- Pendente humano: revisão da amostra e aprovação do conjunto ouro.

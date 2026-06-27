@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import time
+from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -289,6 +290,9 @@ class FirecrawlClient:
         api_key: str | None = None,
         delay_seconds: float = 2.0,
         timeout: int = 30,
+        cache: Any | None = None,
+        max_requests: int | None = None,
+        estimated_cost_per_request_usd: float | None = None,
     ) -> None:
         self.session = session
         self.api_key = api_key or os.getenv("FIRECRAWL_API_KEY")
@@ -296,34 +300,114 @@ class FirecrawlClient:
         self.timeout = timeout
         self._last_request_at = 0.0
         self.provider_name = "firecrawl"
+        self.cache = cache
+        self.max_requests = (
+            max_requests
+            if max_requests is not None
+            else int(os.getenv("FIRECRAWL_MAX_REQUESTS_PER_STARTUP", "10"))
+        )
+        self.estimated_cost_per_request_usd = (
+            estimated_cost_per_request_usd
+            if estimated_cost_per_request_usd is not None
+            else float(os.getenv("FIRECRAWL_ESTIMATED_COST_PER_REQUEST_USD", "0"))
+        )
+        self.stats = {"requests": 0, "cache_hits": 0, "failures": 0, "budget_exceeded": 0}
 
     def scrape(self, url: str) -> dict[str, Any]:
+        cached = self._cache_get(url)
+        if cached is not None:
+            self.stats["cache_hits"] += 1
+            self._record_usage(url, cache_hit=True, success=True)
+            result = deepcopy(cached)
+            result.setdefault("metadados", {})["cache_hit"] = True
+            return result
         if not self.api_key:
             raise ValueError("FIRECRAWL_API_KEY não configurada")
+        if self.stats["requests"] >= self.max_requests:
+            self.stats["budget_exceeded"] += 1
+            raise ValueError(
+                f"Orcamento Firecrawl esgotado: maximo de {self.max_requests} chamadas por startup"
+            )
 
         self._wait()
-        response = self.session.post(
-            FIRECRAWL_SCRAPE_URL,
-            json={"url": url, "formats": ["markdown"]},
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-                "User-Agent": USER_AGENT,
-            },
-            timeout=self.timeout,
-        )
-        response.raise_for_status()
+        self.stats["requests"] += 1
+        try:
+            response = self.session.post(
+                FIRECRAWL_SCRAPE_URL,
+                json={"url": url, "formats": ["markdown"]},
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                    "User-Agent": USER_AGENT,
+                },
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+        except Exception:
+            self.stats["failures"] += 1
+            self._record_usage(
+                url,
+                cache_hit=False,
+                success=False,
+                estimated_cost_usd=self.estimated_cost_per_request_usd,
+            )
+            raise
         payload = response.json()
         data = payload.get("data") or payload
         metadata = data.get("metadata") or {}
 
-        return {
+        result = {
             "url": _clean(metadata.get("sourceURL") or metadata.get("url") or url),
             "titulo_pagina": _clean(metadata.get("title")),
             "conteudo_markdown": _clean(data.get("markdown") or data.get("content")),
             "metadados": metadata,
             "extrator": "firecrawl",
         }
+        self._cache_set(url, result)
+        self._record_usage(
+            url,
+            cache_hit=False,
+            success=True,
+            estimated_cost_usd=self.estimated_cost_per_request_usd,
+        )
+        return result
+
+    def _cache_get(self, url: str) -> dict[str, Any] | None:
+        if self.cache is None:
+            return None
+        try:
+            return self.cache.get(url)
+        except Exception as exc:
+            LOGGER.warning("Falha ao consultar cache Firecrawl para %s: %s", url, exc)
+            return None
+
+    def _cache_set(self, url: str, value: dict[str, Any]) -> None:
+        if self.cache is None:
+            return
+        try:
+            self.cache.set(url, value)
+        except Exception as exc:
+            LOGGER.warning("Falha ao gravar cache Firecrawl para %s: %s", url, exc)
+
+    def _record_usage(
+        self,
+        url: str,
+        *,
+        cache_hit: bool,
+        success: bool,
+        estimated_cost_usd: float = 0.0,
+    ) -> None:
+        if self.cache is None:
+            return
+        try:
+            self.cache.record_usage(
+                url,
+                cache_hit=cache_hit,
+                success=success,
+                estimated_cost_usd=estimated_cost_usd,
+            )
+        except Exception as exc:
+            LOGGER.warning("Falha ao registrar uso Firecrawl para %s: %s", url, exc)
 
     def _wait(self) -> None:
         if self.delay_seconds <= 0:
@@ -379,6 +463,7 @@ class ScraperAgent:
         timeout: int = 10,
         search_delay_seconds: float = 1.0,
         firecrawl_delay_seconds: float = 2.0,
+        web_cache: Any | None = None,
     ) -> None:
         self.session = session or requests.Session()
         self.timeout = timeout
@@ -390,6 +475,7 @@ class ScraperAgent:
         self.firecrawl = firecrawl_client or FirecrawlClient(
             self.session,
             delay_seconds=firecrawl_delay_seconds,
+            cache=web_cache,
         )
         self.trafilatura = trafilatura_extractor or TrafilaturaExtractor(self.session, timeout=timeout)
 
@@ -428,6 +514,17 @@ class ScraperAgent:
             metricas["total_resultados_busca"] += sum(len(item["resultados"]) for item in complementary)
 
         metricas["tempo_total_execucao_segundos"] = round(time.perf_counter() - started_at, 2)
+        firecrawl_stats = getattr(self.firecrawl, "stats", None)
+        if isinstance(firecrawl_stats, dict):
+            metricas["firecrawl"] = {
+                **firecrawl_stats,
+                "max_requests": getattr(self.firecrawl, "max_requests", None),
+                "estimated_cost_usd": round(
+                    firecrawl_stats.get("requests", 0)
+                    * getattr(self.firecrawl, "estimated_cost_per_request_usd", 0.0),
+                    6,
+                ),
+            }
 
         return {
             "startup": startup,
@@ -560,6 +657,7 @@ def executar_scraper_agent(
     search_client: Any | None = None,
     firecrawl_client: FirecrawlClient | None = None,
     trafilatura_extractor: TrafilaturaExtractor | None = None,
+    web_cache: Any | None = None,
 ) -> dict[str, Any]:
     search_delay = 1.0 if delay_seconds is None else delay_seconds
     firecrawl_delay = 2.0 if delay_seconds is None else delay_seconds
@@ -570,6 +668,7 @@ def executar_scraper_agent(
         trafilatura_extractor=trafilatura_extractor,
         search_delay_seconds=search_delay,
         firecrawl_delay_seconds=firecrawl_delay,
+        web_cache=web_cache,
     ).executar(plano)
 
 

@@ -272,6 +272,28 @@ create table if not exists nvidia_inception.batch_dead_letters (
   created_at timestamptz not null default now()
 );
 
+create table if not exists nvidia_inception.web_content_cache (
+  cache_key text primary key,
+  url text not null check (url ~* '^https?://'),
+  extractor text not null,
+  response_json jsonb not null,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists nvidia_inception.external_api_usage (
+  id uuid primary key default gen_random_uuid(),
+  provider text not null,
+  operation text not null,
+  source_domain text,
+  units integer not null default 1 check (units >= 0),
+  estimated_cost_usd double precision not null default 0 check (estimated_cost_usd >= 0),
+  cache_hit boolean not null default false,
+  success boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists pipeline_runs_startup_id_idx
   on nvidia_inception.pipeline_runs(startup_id);
 create index if not exists pipeline_runs_status_idx
@@ -311,6 +333,10 @@ create index if not exists batch_items_pipeline_run_id_idx
   on nvidia_inception.batch_items(pipeline_run_id);
 create index if not exists batch_dead_letters_batch_run_id_idx
   on nvidia_inception.batch_dead_letters(batch_run_id);
+create index if not exists web_content_cache_expires_idx
+  on nvidia_inception.web_content_cache(expires_at);
+create index if not exists external_api_usage_provider_created_idx
+  on nvidia_inception.external_api_usage(provider, created_at);
 
 drop trigger if exists startups_set_updated_at on nvidia_inception.startups;
 create trigger startups_set_updated_at
@@ -332,6 +358,11 @@ create trigger batch_items_set_updated_at
 before update on nvidia_inception.batch_items
 for each row execute function nvidia_inception.set_updated_at();
 
+drop trigger if exists web_content_cache_set_updated_at on nvidia_inception.web_content_cache;
+create trigger web_content_cache_set_updated_at
+before update on nvidia_inception.web_content_cache
+for each row execute function nvidia_inception.set_updated_at();
+
 alter table nvidia_inception.startups enable row level security;
 alter table nvidia_inception.pipeline_runs enable row level security;
 alter table nvidia_inception.search_queries enable row level security;
@@ -346,6 +377,8 @@ alter table nvidia_inception.executive_briefings enable row level security;
 alter table nvidia_inception.batch_runs enable row level security;
 alter table nvidia_inception.batch_items enable row level security;
 alter table nvidia_inception.batch_dead_letters enable row level security;
+alter table nvidia_inception.web_content_cache enable row level security;
+alter table nvidia_inception.external_api_usage enable row level security;
 
 do $$
 declare
@@ -355,7 +388,8 @@ begin
     'startups', 'pipeline_runs', 'search_queries', 'sources', 'evidences',
     'ai_assessments', 'nvidia_recommendations', 'recommendation_citations',
     'recommendation_refinements', 'impact_estimates', 'executive_briefings',
-    'batch_runs', 'batch_items', 'batch_dead_letters'
+    'batch_runs', 'batch_items', 'batch_dead_letters', 'web_content_cache',
+    'external_api_usage'
   ] loop
     execute format('drop policy if exists service_role_all on nvidia_inception.%I', table_name);
     execute format(

@@ -1,8 +1,9 @@
 import json
 
+import pytest
 import requests
 
-from app.agents.scraper_agent import executar_scraper_agent, salvar_resultado_scraper
+from app.agents.scraper_agent import FirecrawlClient, executar_scraper_agent, salvar_resultado_scraper
 
 
 class FakeResponse:
@@ -91,11 +92,11 @@ class FakeSession:
                 json_payload={
                     "data": {
                         "web": [
-                        {
-                            "title": "Caso IA via Firecrawl",
-                            "url": "https://example.com/ia",
-                            "description": "Startup usa machine learning e NVIDIA para modelos.",
-                        }
+                            {
+                                "title": "Caso IA via Firecrawl",
+                                "url": "https://example.com/ia",
+                                "description": "Startup usa machine learning e NVIDIA para modelos.",
+                            }
                         ]
                     }
                 },
@@ -116,6 +117,32 @@ class FakeSession:
                 },
             )
         return FakeResponse(status_code=404, url=url)
+
+
+class FakeWebCache:
+    def __init__(self):
+        self.values = {}
+        self.usage = []
+
+    def get(self, url):
+        return self.values.get(url)
+
+    def set(self, url, value):
+        self.values[url] = value
+
+    def record_usage(self, url, **payload):
+        self.usage.append({"url": url, **payload})
+
+
+class BrokenWebCache:
+    def get(self, url):
+        raise RuntimeError("cache indisponivel")
+
+    def set(self, url, value):
+        raise RuntimeError("cache indisponivel")
+
+    def record_usage(self, url, **payload):
+        raise RuntimeError("ledger indisponivel")
 
 
 def test_scraper_agent_uses_searxng_and_firecrawl_for_web_search(monkeypatch):
@@ -212,6 +239,67 @@ def test_scraper_agent_uses_firecrawl_for_direct_access(monkeypatch):
     assert resultado["status"] == "completo"
     assert resultado["paginas_completas"][0]["extrator"] == "firecrawl"
     assert resultado["paginas_completas"][0]["titulo_pagina"] == "Caso IA"
+
+
+def test_firecrawl_reuses_cache_without_api_key(monkeypatch):
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    cache = FakeWebCache()
+    url = "https://example.com/ia"
+    cache.values[url] = {
+        "url": url,
+        "titulo_pagina": "Caso em cache",
+        "conteudo_markdown": "# IA",
+        "metadados": {},
+        "extrator": "firecrawl",
+    }
+    session = FakeSession()
+    client = FirecrawlClient(session, cache=cache, delay_seconds=0)
+
+    resultado = client.scrape(url)
+
+    assert resultado["metadados"]["cache_hit"] is True
+    assert client.stats["cache_hits"] == 1
+    assert not any(call[0] == "POST" for call in session.calls)
+    assert cache.usage[0]["cache_hit"] is True
+
+
+def test_firecrawl_stores_response_and_reuses_it(monkeypatch):
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "firecrawl-test")
+    cache = FakeWebCache()
+    session = FakeSession()
+    client = FirecrawlClient(session, cache=cache, delay_seconds=0)
+
+    first = client.scrape("https://example.com/ia")
+    second = client.scrape("https://example.com/ia")
+
+    assert first["titulo_pagina"] == "Caso IA"
+    assert second["metadados"]["cache_hit"] is True
+    assert client.stats == {"requests": 1, "cache_hits": 1, "failures": 0, "budget_exceeded": 0}
+    assert sum(call[0] == "POST" for call in session.calls) == 1
+
+
+def test_firecrawl_enforces_request_budget(monkeypatch):
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "firecrawl-test")
+    client = FirecrawlClient(FakeSession(), delay_seconds=0, max_requests=1)
+
+    client.scrape("https://example.com/primeira")
+
+    with pytest.raises(ValueError, match="Orcamento Firecrawl esgotado"):
+        client.scrape("https://example.com/segunda")
+    assert client.stats["requests"] == 1
+    assert client.stats["budget_exceeded"] == 1
+
+
+def test_firecrawl_continues_when_cache_is_unavailable(monkeypatch):
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "firecrawl-test")
+    client = FirecrawlClient(
+        FakeSession(), cache=BrokenWebCache(), delay_seconds=0
+    )
+
+    resultado = client.scrape("https://example.com/ia")
+
+    assert resultado["titulo_pagina"] == "Caso IA"
+    assert client.stats["requests"] == 1
 
 
 def test_scraper_agent_uses_trafilatura_for_direct_access():

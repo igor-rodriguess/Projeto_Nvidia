@@ -8,6 +8,7 @@ from uuid import UUID
 from langchain_core.runnables import Runnable, RunnableLambda
 
 from app.persistence.persistence_service import PersistenceError, PipelinePersistence
+from app.persistence.web_cache import SupabaseWebContentCache
 from app.services.enterprise_pipeline import EnterprisePipeline
 
 
@@ -142,6 +143,7 @@ def create_pipeline_with_persistence(
 ) -> Runnable[dict[str, Any], dict[str, Any]]:
     """Create a LangChain runnable that persists all stages in degraded mode."""
     hook = PipelinePersistenceHook(persistence)
+    pipeline_kwargs.setdefault("web_cache", SupabaseWebContentCache(persistence))
     pipeline = EnterprisePipeline(persistence_hook=hook, **pipeline_kwargs)
     return RunnableLambda(partial(_invoke_pipeline, pipeline=pipeline))
 
