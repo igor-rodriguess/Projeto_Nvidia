@@ -116,7 +116,7 @@ def stratified_sample(
     for group in groups.values():
         randomizer.shuffle(group)
 
-    selected = []
+    selected: list[dict[str, Any]] = []
     ordered_keys = sorted(groups)
     while len(selected) < sample_size:
         progressed = False

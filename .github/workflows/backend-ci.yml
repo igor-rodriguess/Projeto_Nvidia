@@ -1,0 +1,61 @@
+name: Backend CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Testes e qualidade
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+      - name: Instalar dependencias
+        run: python -m pip install --upgrade pip && pip install -r requirements-dev.txt
+      - name: Verificar erros estaticos
+        run: python -m ruff check app tests scripts
+      - name: Verificar contratos tipados
+        run: python -m mypy
+      - name: Executar testes
+        run: pytest -q
+
+  secret-scan:
+    name: Scan de segredos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Executar Gitleaks no historico
+        run: >-
+          docker run --rm
+          -v "$PWD:/repo"
+          ghcr.io/gitleaks/gitleaks:v8.30.0
+          detect --source=/repo --no-banner --redact
+
+  container-build:
+    name: Build da imagem
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Construir backend sem segredos
+        run: docker build --tag nvidia-startup-ai-radar:${{ github.sha }} backend

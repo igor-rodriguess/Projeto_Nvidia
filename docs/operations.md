@@ -62,6 +62,22 @@ cd backend
 python -m pytest -q
 ```
 
+## Integração contínua
+
+O workflow `.github/workflows/backend-ci.yml` executa em pull requests e pushes para
+`main`: lint de erros críticos, type check dos contratos e da avaliação, testes,
+scan Gitleaks do histórico completo e build da imagem Docker sem segredos.
+
+Para reproduzir a etapa de qualidade localmente:
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+python -m ruff check app tests scripts
+python -m mypy
+pytest -q
+```
+
 ## Diagnóstico
 
 - `status: parcial`: consulte `errors` e a etapa correspondente em `trace`.
