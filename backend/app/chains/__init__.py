@@ -1,4 +1,5 @@
 from app.chains.agent_chains import (
+    create_briefing_generator_chain,
     create_classifier_chain,
     create_evidence_validator_chain,
     create_impact_estimator_chain,
@@ -9,6 +10,7 @@ from app.chains.agent_chains import (
 )
 
 __all__ = [
+    "create_briefing_generator_chain",
     "create_classifier_chain",
     "create_evidence_validator_chain",
     "create_impact_estimator_chain",

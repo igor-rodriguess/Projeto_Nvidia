@@ -376,6 +376,20 @@ class ImpactEstimationOutput(ContractModel):
     resumo_executivo: str = Field(min_length=1)
 
 
+class BriefingGeneratorInput(ContractModel):
+    startup_profile: dict[str, Any]
+    classificacao_ia: AIMaturityOutput
+    recomendacao_refinada: RecommendationRefinementOutput
+    estimativa_impacto: ImpactEstimationOutput
+    validacao_evidencias: EvidenceValidationOutput | None = None
+    responsavel: str = "Time NVIDIA Inception Brasil"
+
+
+class ExecutiveBriefingOutput(ContractModel):
+    startup: str = Field(min_length=1)
+    markdown: str = Field(min_length=1, max_length=12000)
+
+
 class StageTrace(ContractModel):
     status: Literal["completo", "cache", "parcial", "falha"]
     duration_ms: float = Field(ge=0)

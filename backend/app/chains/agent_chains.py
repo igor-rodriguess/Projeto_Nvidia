@@ -11,6 +11,7 @@ from app.agents.scraper_agent import executar_scraper_agent
 from app.agents.search_planner_agent import planejar_busca_ia_startup
 from app.agents.recommendation_agent import RecommendationAgent
 from app.agents.impact_estimator_agent import ImpactEstimatorAgent
+from app.agents.briefing_generator_agent import BriefingGeneratorAgent
 from app.core.contracts import validate_contract
 from app.core.schemas import (
     AIMaturityOutput,
@@ -23,6 +24,8 @@ from app.core.schemas import (
     RecommendationRefinerInput,
     ImpactEstimationOutput,
     ImpactEstimatorInput,
+    BriefingGeneratorInput,
+    ExecutiveBriefingOutput,
     NVIDIARecommendationOutput,
     ScraperOutput,
     SearchPlanOutput,
@@ -142,6 +145,23 @@ def create_impact_estimator_chain(
         estimator_input = validate_contract(ImpactEstimatorInput, payload)
         output = estimator.estimate(estimator_input)
         return validate_contract(ImpactEstimationOutput, output).model_dump(mode="json")
+
+    return _maybe_with_retry(RunnableLambda(invoke), enable_retry)
+
+
+def create_briefing_generator_chain(
+    agent: BriefingGeneratorAgent | None = None,
+    enable_retry: bool = True,
+) -> Runnable[dict[str, Any], dict[str, Any]]:
+    generator = agent or BriefingGeneratorAgent()
+
+    def invoke(payload: dict[str, Any]) -> dict[str, Any]:
+        briefing_input = validate_contract(BriefingGeneratorInput, payload)
+        output = {
+            "startup": briefing_input.classificacao_ia.startup,
+            "markdown": generator.generate(briefing_input),
+        }
+        return validate_contract(ExecutiveBriefingOutput, output).model_dump(mode="json")
 
     return _maybe_with_retry(RunnableLambda(invoke), enable_retry)
 
