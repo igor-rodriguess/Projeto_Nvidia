@@ -77,6 +77,28 @@ class FakePersistence:
     db = FakeDatabase()
 
 
+class RunDatabase:
+    def __init__(self, run_id):
+        self.run_id = str(run_id)
+
+    def table(self, name):
+        if name == "pipeline_runs":
+            return FakeQuery([{"id": self.run_id, "status": "completed"}])
+        if name == "inception_fit_assessments":
+            return FakeQuery(
+                [
+                    {
+                        "id": str(uuid4()),
+                        "pipeline_run_id": self.run_id,
+                        "eligibility_status": "unknown",
+                        "startup_stage": "unknown",
+                        "fit_json": {"open_questions": ["Confirmar elegibilidade."]},
+                    }
+                ]
+            )
+        return FakeQuery([])
+
+
 def test_health_endpoint():
     with TestClient(app) as client:
         response = client.get("/health")
@@ -116,6 +138,20 @@ def test_protected_endpoint_rejects_missing_api_key(monkeypatch):
         with TestClient(app) as client:
             response = client.get("/api/v1/startups")
         assert response.status_code == 401
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_run_detail_exposes_inception_fit(monkeypatch):
+    monkeypatch.setenv("BACKEND_API_KEY", "test-api-key")
+    run_id = uuid4()
+    persistence = type("Persistence", (), {"db": RunDatabase(run_id)})()
+    app.dependency_overrides[get_persistence] = lambda: persistence
+    try:
+        with TestClient(app) as client:
+            response = client.get(f"/api/v1/runs/{run_id}", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json()["inception_fit"]["eligibility_status"] == "unknown"
     finally:
         app.dependency_overrides.clear()
 

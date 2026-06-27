@@ -68,6 +68,7 @@ def get_analysis(
     return {
         "run": run,
         "assessment": _artifact(persistence, "ai_assessments", run_id),
+        "inception_fit": _artifact(persistence, "inception_fit_assessments", run_id),
         "recommendation": _artifact(persistence, "nvidia_recommendations", run_id),
         "refinement": _artifact(persistence, "recommendation_refinements", run_id),
         "impact": _artifact(persistence, "impact_estimates", run_id),
