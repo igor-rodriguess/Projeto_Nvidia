@@ -258,7 +258,7 @@ class SearchProviderRouter:
                 if results:
                     return results
                 errors.append(f"{client.provider_name}: sem resultados")
-            except (requests.RequestException, ValueError) as exc:
+            except Exception as exc:
                 errors.append(f"{client.provider_name}: {exc}")
                 LOGGER.warning("Provedor de busca falhou (%s): %s", client.provider_name, exc)
         raise ValueError("Nenhum provedor de busca disponível. Erros: " + " | ".join(errors))
@@ -453,7 +453,7 @@ class ScraperAgent:
             if tipo == "api_get":
                 return _resultado_base(tarefa), [_erro(tarefa, tarefa.get("url"), "api_get não é suportado nesta versão; use SearXNG, DDGS, Firecrawl, trafilatura ou feed_rss")]
             raise ValueError(f"Tipo de tarefa não suportado: {tipo}")
-        except (requests.RequestException, ValueError) as exc:
+        except Exception as exc:
             return _resultado_base(tarefa), [_erro(tarefa, tarefa.get("url"), str(exc))]
 
     def _executar_busca_web(self, tarefa: dict[str, Any]) -> dict[str, Any]:
@@ -468,7 +468,7 @@ class ScraperAgent:
             try:
                 page = self._extrair_pagina(item["url"], preferred_extractor="firecrawl")
                 full_pages.append(page)
-            except (requests.RequestException, ValueError) as exc:
+            except Exception as exc:
                 LOGGER.warning("Extração falhou para %s: %s", item["url"], exc)
 
         return {

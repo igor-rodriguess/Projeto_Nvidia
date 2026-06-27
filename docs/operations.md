@@ -9,6 +9,9 @@
 
 ## Subir serviços
 
+Antes da primeira execução, crie o `.env` da raiz com um segredo aleatório para o
+SearXNG, conforme o arquivo `.env.example`.
+
 ```bash
 docker compose up -d qdrant searxng
 docker compose ps

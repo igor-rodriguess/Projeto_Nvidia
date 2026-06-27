@@ -16,10 +16,11 @@ services:
       - "8080:8080"
     environment:
       - SEARXNG_BASE_URL=http://localhost:8080/
+      - SEARXNG_SECRET=${SEARXNG_SECRET:?SEARXNG_SECRET deve ser configurado no .env da raiz}
+      - SEARXNG_LIMITER=false
     volumes:
-      - searxng_data:/etc/searxng
+      - ./infra/searxng/settings.yml:/etc/searxng/settings.yml:ro
     restart: unless-stopped
 
 volumes:
   qdrant_data:
-  searxng_data:

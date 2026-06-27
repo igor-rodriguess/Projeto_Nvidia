@@ -296,3 +296,33 @@ def test_salvar_resultado_scraper_writes_json(tmp_path):
 
     assert path.name.startswith("evidencias_clara-pagamentos_")
     assert saved["startup"] == "Clara Pagamentos"
+
+
+class NoResultsSearchClient:
+    def search(self, query, count):
+        raise RuntimeError("No results found.")
+
+
+def test_scraper_agent_isolates_unexpected_search_provider_error():
+    plano = {
+        "startup": "Clara Pagamentos",
+        "tarefas": [
+            {
+                "id": "task_sem_resultado",
+                "tipo": "busca_web",
+                "consulta": '"Clara Pagamentos" termo inexistente',
+                "max_resultados": 2,
+            }
+        ],
+    }
+
+    resultado = executar_scraper_agent(
+        plano,
+        search_client=NoResultsSearchClient(),
+        delay_seconds=0,
+    )
+
+    assert resultado["status"] == "parcial"
+    assert resultado["metricas"]["tarefas_executadas"] == 1
+    assert resultado["metricas"]["tarefas_com_erro"] == 1
+    assert resultado["erros"][0]["erro"] == "No results found."
