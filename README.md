@@ -35,12 +35,18 @@ Cubo Itaú
   -> Search Planner Agent
   -> Scraper Agent
   -> Evidence Validator Agent
+  -> AI Maturity Classifier Agent
 ```
 
 O Evidence Validator Agent audita os resultados coletados, remove URLs quebradas,
 homônimos e menções irrelevantes, classifica a credibilidade das fontes e identifica
 evidências de IA. O resultado consolidado será a entrada do futuro AI Maturity
 Classifier.
+
+O AI Maturity Classifier usa somente evidências com confiança mínima de 0,4 para
+classificar a startup como `AI-native`, `AI-enabled`, `API-consumer` ou `Non-AI`.
+Ele também registra nível de maturidade, tecnologias encontradas, limitações e as
+fontes exatas que sustentam a decisão.
 
 Para investigar uma startup da base curated:
 
@@ -51,3 +57,4 @@ python scripts/investigar_startup_ia.py data/curated/_cubo/<arquivo>.json "Nome 
 
 As coletas brutas são salvas em `backend/data/raw/_evidencias/` e as evidências
 validadas em `backend/data/processed/_evidencias/`.
+As classificações são salvas em `backend/data/curated/_maturidade_ia/`.
