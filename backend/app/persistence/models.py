@@ -210,6 +210,7 @@ class BatchRun(PersistenceModel):
     errors: list[str] = Field(default_factory=list)
     worker_id: str | None = None
     heartbeat_at: datetime | None = None
+    lease_expires_at: datetime | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None
     created_at: datetime | None = None
@@ -233,3 +234,19 @@ class BatchItem(PersistenceModel):
     finished_at: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+class BatchDeadLetter(PersistenceModel):
+    """Exhausted batch item retained for diagnosis and explicit replay."""
+
+    id: UUID | None = None
+    batch_run_id: UUID
+    batch_item_id: UUID
+    startup_external_id: str = Field(min_length=1)
+    startup_name: str = Field(min_length=1)
+    startup_payload: dict[str, Any] = Field(default_factory=dict)
+    attempt_count: int = Field(ge=1)
+    last_error: str = Field(min_length=1)
+    failed_at: datetime | None = None
+    resolved_at: datetime | None = None
+    created_at: datetime | None = None

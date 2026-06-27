@@ -143,18 +143,31 @@ class BatchProcessingService:
             self.repository.requeue_retryable_items(batch_id, options.max_attempts)
         self.repository.start_batch(batch_id)
 
-        pending = self.repository.list_items(batch_id, statuses={"pending"})
-        for item in pending:
-            if self.repository.is_cancelled(batch_id):
-                break
-            if worker_id:
-                self.repository.heartbeat(batch_id, worker_id)
-            failed = not self._process_item(item)
-            self.repository.finalize_batch(batch_id)
-            if worker_id:
-                self.repository.heartbeat(batch_id, worker_id)
-            if failed and options.stop_on_error:
-                break
+        stop_requested = False
+        while not stop_requested:
+            pending = self.repository.list_items(batch_id, statuses={"pending"})
+            if not pending:
+                requeued = self.repository.requeue_retryable_items(
+                    batch_id,
+                    options.max_attempts,
+                )
+                if not requeued:
+                    break
+                pending = self.repository.list_items(batch_id, statuses={"pending"})
+            for item in pending:
+                if self.repository.is_cancelled(batch_id):
+                    stop_requested = True
+                    break
+                if worker_id:
+                    self.repository.heartbeat(batch_id, worker_id)
+                failed = not self._process_item(item)
+                self.repository.finalize_batch(batch_id)
+                if worker_id:
+                    self.repository.heartbeat(batch_id, worker_id)
+                if failed and options.stop_on_error:
+                    stop_requested = True
+                    break
+        self.repository.dead_letter_exhausted_items(batch_id, options.max_attempts)
         final = self.repository.finalize_batch(batch_id)
         LOGGER.info(
             "batch_finished",

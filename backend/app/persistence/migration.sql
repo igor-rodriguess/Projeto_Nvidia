@@ -221,6 +221,7 @@ create table if not exists nvidia_inception.batch_runs (
   errors jsonb not null default '[]'::jsonb,
   worker_id text,
   heartbeat_at timestamptz,
+  lease_expires_at timestamptz,
   started_at timestamptz,
   finished_at timestamptz,
   created_at timestamptz not null default now(),
@@ -235,6 +236,8 @@ alter table nvidia_inception.batch_runs
   add column if not exists worker_id text;
 alter table nvidia_inception.batch_runs
   add column if not exists heartbeat_at timestamptz;
+alter table nvidia_inception.batch_runs
+  add column if not exists lease_expires_at timestamptz;
 
 create table if not exists nvidia_inception.batch_items (
   id uuid primary key default gen_random_uuid(),
@@ -253,6 +256,20 @@ create table if not exists nvidia_inception.batch_items (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (batch_run_id, startup_external_id)
+);
+
+create table if not exists nvidia_inception.batch_dead_letters (
+  id uuid primary key default gen_random_uuid(),
+  batch_run_id uuid not null references nvidia_inception.batch_runs(id) on delete cascade,
+  batch_item_id uuid not null unique references nvidia_inception.batch_items(id) on delete cascade,
+  startup_external_id text not null,
+  startup_name text not null,
+  startup_payload jsonb not null default '{}'::jsonb,
+  attempt_count integer not null check (attempt_count >= 1),
+  last_error text not null,
+  failed_at timestamptz not null default now(),
+  resolved_at timestamptz,
+  created_at timestamptz not null default now()
 );
 
 create index if not exists pipeline_runs_startup_id_idx
@@ -292,6 +309,8 @@ create index if not exists batch_items_batch_status_idx
   on nvidia_inception.batch_items(batch_run_id, status);
 create index if not exists batch_items_pipeline_run_id_idx
   on nvidia_inception.batch_items(pipeline_run_id);
+create index if not exists batch_dead_letters_batch_run_id_idx
+  on nvidia_inception.batch_dead_letters(batch_run_id);
 
 drop trigger if exists startups_set_updated_at on nvidia_inception.startups;
 create trigger startups_set_updated_at
@@ -326,6 +345,7 @@ alter table nvidia_inception.impact_estimates enable row level security;
 alter table nvidia_inception.executive_briefings enable row level security;
 alter table nvidia_inception.batch_runs enable row level security;
 alter table nvidia_inception.batch_items enable row level security;
+alter table nvidia_inception.batch_dead_letters enable row level security;
 
 do $$
 declare
@@ -335,7 +355,7 @@ begin
     'startups', 'pipeline_runs', 'search_queries', 'sources', 'evidences',
     'ai_assessments', 'nvidia_recommendations', 'recommendation_citations',
     'recommendation_refinements', 'impact_estimates', 'executive_briefings',
-    'batch_runs', 'batch_items'
+    'batch_runs', 'batch_items', 'batch_dead_letters'
   ] loop
     execute format('drop policy if exists service_role_all on nvidia_inception.%I', table_name);
     execute format(

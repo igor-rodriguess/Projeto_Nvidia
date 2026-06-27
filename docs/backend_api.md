@@ -55,14 +55,20 @@ curl -X POST http://127.0.0.1:8000/api/v1/batches \
 GET  /api/v1/batches
 GET  /api/v1/batches/{batch_id}
 GET  /api/v1/batches/{batch_id}/items
+GET  /api/v1/batches/{batch_id}/dead-letters
 POST /api/v1/batches/{batch_id}/run
 POST /api/v1/batches/{batch_id}/resume
 POST /api/v1/batches/{batch_id}/cancel
+POST /api/v1/batches/dead-letters/{dead_letter_id}/replay
 ```
 
 Itens interrompidos voltam para `pending` no `resume`. Itens `failed` são tentados
 novamente enquanto `attempt_count < max_attempts`. Uma falha individual não encerra
 as demais startups, salvo quando `stop_on_error=true`.
+
+O worker renova um lease durante chamadas longas. Ao esgotar `max_attempts`, o item
+é preservado em `batch_dead_letters` com payload, erro e número de tentativas. O
+replay é explícito e reinicia o contador do item, mantendo o histórico da DLQ.
 
 ## Consultar resultados
 

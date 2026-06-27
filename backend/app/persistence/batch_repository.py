@@ -4,7 +4,13 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Iterable
 from uuid import UUID
 
-from app.persistence.models import BatchItem, BatchItemStatus, BatchRun, BatchStatus
+from app.persistence.models import (
+    BatchDeadLetter,
+    BatchItem,
+    BatchItemStatus,
+    BatchRun,
+    BatchStatus,
+)
 from app.persistence.persistence_service import PersistenceError, PipelinePersistence
 
 
@@ -108,11 +114,16 @@ class BatchRepository:
                 "status": "pending",
                 "worker_id": None,
                 "heartbeat_at": None,
+                "lease_expires_at": None,
                 "finished_at": None,
             },
         )
 
-    def claim_next_batch(self, worker_id: str) -> dict[str, Any] | None:
+    def claim_next_batch(
+        self,
+        worker_id: str,
+        lease_seconds: int = 120,
+    ) -> dict[str, Any] | None:
         candidates = (
             self.db.table("batch_runs")
             .select("*")
@@ -121,7 +132,9 @@ class BatchRepository:
             .limit(5)
             .execute()
         )
-        now = datetime.now(UTC).isoformat()
+        now_value = datetime.now(UTC)
+        now = now_value.isoformat()
+        lease_expires_at = (now_value + timedelta(seconds=lease_seconds)).isoformat()
         for candidate in list(getattr(candidates, "data", None) or []):
             response = (
                 self.db.table("batch_runs")
@@ -130,6 +143,7 @@ class BatchRepository:
                         "status": "running",
                         "worker_id": worker_id,
                         "heartbeat_at": now,
+                        "lease_expires_at": lease_expires_at,
                         "started_at": candidate.get("started_at") or now,
                         "finished_at": None,
                     }
@@ -146,9 +160,13 @@ class BatchRepository:
                 return current
         return None
 
-    def heartbeat(self, batch_id: UUID, worker_id: str) -> None:
+    def heartbeat(self, batch_id: UUID, worker_id: str, lease_seconds: int = 120) -> None:
+        now = datetime.now(UTC)
         self.db.table("batch_runs").update(
-            {"heartbeat_at": datetime.now(UTC).isoformat()}
+            {
+                "heartbeat_at": now.isoformat(),
+                "lease_expires_at": (now + timedelta(seconds=lease_seconds)).isoformat(),
+            }
         ).eq("id", str(batch_id)).eq("worker_id", worker_id).eq("status", "running").execute()
 
     def recover_stale_batches(self, stale_after_minutes: int = 30) -> int:
@@ -156,8 +174,11 @@ class BatchRepository:
         response = self.db.table("batch_runs").select("*").eq("status", "running").execute()
         recovered = 0
         for batch in list(getattr(response, "data", None) or []):
+            lease_expires = _parse_datetime(batch.get("lease_expires_at"))
             heartbeat = _parse_datetime(batch.get("heartbeat_at") or batch.get("updated_at"))
-            if heartbeat is not None and heartbeat >= threshold:
+            if lease_expires is not None and lease_expires > datetime.now(UTC):
+                continue
+            if lease_expires is None and heartbeat is not None and heartbeat >= threshold:
                 continue
             batch_id = UUID(batch["id"])
             self.recover_interrupted_items(batch_id)
@@ -252,23 +273,27 @@ class BatchRepository:
         else:
             status = "completed"
             finished_at = datetime.now(UTC).isoformat()
-        self._update_batch(
-            batch_id,
-            {
-                "status": status,
-                "processed_items": processed,
-                "succeeded_items": counts["completed"],
-                "partial_items": counts["partial"],
-                "failed_items": counts["failed"],
-                "finished_at": finished_at,
-            },
-        )
+        updates = {
+            "status": status,
+            "processed_items": processed,
+            "succeeded_items": counts["completed"],
+            "partial_items": counts["partial"],
+            "failed_items": counts["failed"],
+            "finished_at": finished_at,
+        }
+        if finished_at:
+            updates["lease_expires_at"] = None
+        self._update_batch(batch_id, updates)
         return self.get_batch(batch_id)
 
     def cancel_batch(self, batch_id: UUID) -> None:
         self._update_batch(
             batch_id,
-            {"status": "cancelled", "finished_at": datetime.now(UTC).isoformat()},
+            {
+                "status": "cancelled",
+                "finished_at": datetime.now(UTC).isoformat(),
+                "lease_expires_at": None,
+            },
         )
 
     def fail_batch(self, batch_id: UUID, error: str) -> None:
@@ -282,6 +307,7 @@ class BatchRepository:
                 "errors": errors,
                 "heartbeat_at": datetime.now(UTC).isoformat(),
                 "finished_at": datetime.now(UTC).isoformat(),
+                "lease_expires_at": None,
             },
         )
 
@@ -297,6 +323,64 @@ class BatchRepository:
             .execute()
         )
         return list(getattr(response, "data", None) or [])
+
+    def dead_letter_exhausted_items(self, batch_id: UUID, max_attempts: int) -> int:
+        failed = self.list_items(batch_id, statuses={"failed"})
+        exhausted = [item for item in failed if int(item.get("attempt_count") or 0) >= max_attempts]
+        for item in exhausted:
+            model = BatchDeadLetter(
+                batch_run_id=batch_id,
+                batch_item_id=UUID(item["id"]),
+                startup_external_id=item["startup_external_id"],
+                startup_name=item["startup_name"],
+                startup_payload=item.get("startup_payload") or {},
+                attempt_count=int(item["attempt_count"]),
+                last_error=item.get("last_error") or "Falha sem mensagem",
+            )
+            self.db.table("batch_dead_letters").upsert(
+                model.model_dump(
+                    mode="json",
+                    exclude={"id", "failed_at", "resolved_at", "created_at"},
+                    exclude_none=True,
+                ),
+                on_conflict="batch_item_id",
+            ).execute()
+        return len(exhausted)
+
+    def list_dead_letters(self, batch_id: UUID) -> list[dict[str, Any]]:
+        response = (
+            self.db.table("batch_dead_letters")
+            .select("*")
+            .eq("batch_run_id", str(batch_id))
+            .execute()
+        )
+        return list(getattr(response, "data", None) or [])
+
+    def replay_dead_letter(self, dead_letter_id: UUID) -> UUID:
+        response = (
+            self.db.table("batch_dead_letters")
+            .select("*")
+            .eq("id", str(dead_letter_id))
+            .limit(1)
+            .execute()
+        )
+        letter = _first_required(response, f"Dead letter nao encontrada: {dead_letter_id}")
+        item_id = UUID(letter["batch_item_id"])
+        self._update_item(
+            item_id,
+            {
+                "status": "pending",
+                "attempt_count": 0,
+                "last_error": None,
+                "started_at": None,
+                "finished_at": None,
+            },
+        )
+        self.db.table("batch_dead_letters").update(
+            {"resolved_at": datetime.now(UTC).isoformat()}
+        ).eq("id", str(dead_letter_id)).execute()
+        self.queue_batch(UUID(letter["batch_run_id"]))
+        return item_id
 
     def _update_batch(self, batch_id: UUID, values: dict[str, Any]) -> None:
         self.db.table("batch_runs").update(values).eq("id", str(batch_id)).execute()

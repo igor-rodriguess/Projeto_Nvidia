@@ -66,7 +66,7 @@ def test_batch_service_processes_items_and_isolates_failure(tmp_path):
     assert items[1]["last_error"] == "Fonte indisponivel"
 
 
-def test_batch_service_resumes_retryable_failure(tmp_path):
+def test_batch_service_retries_transient_failure_automatically(tmp_path):
     _write_curated(tmp_path)
     repository = BatchRepository(PipelinePersistence(client=FakeSupabase()))
     attempts = {"count": 0}
@@ -86,9 +86,30 @@ def test_batch_service_resumes_retryable_failure(tmp_path):
         "curated.json",
         BatchExecutionOptions(limit=1, max_attempts=2),
     )
-    assert service.run_batch(batch_id)["status"] == "failed"
-    assert service.run_batch(batch_id, resume=True)["status"] == "completed"
+    assert service.run_batch(batch_id)["status"] == "completed"
     assert repository.list_items(batch_id)[0]["attempt_count"] == 2
+
+
+def test_batch_service_moves_exhausted_failure_to_dead_letter(tmp_path):
+    _write_curated(tmp_path)
+    repository = BatchRepository(PipelinePersistence(client=FakeSupabase()))
+    service = BatchProcessingService(
+        repository,
+        loader=CuratedStartupLoader(tmp_path),
+        pipeline_runner=lambda payload: (_ for _ in ()).throw(RuntimeError("Falha permanente")),
+    )
+    batch_id = service.create_batch(
+        "curated.json",
+        BatchExecutionOptions(limit=1, max_attempts=2),
+    )
+
+    result = service.run_batch(batch_id)
+    letters = repository.list_dead_letters(batch_id)
+
+    assert result["status"] == "failed"
+    assert repository.list_items(batch_id)[0]["attempt_count"] == 2
+    assert len(letters) == 1
+    assert letters[0]["last_error"] == "Falha permanente"
 
 
 def test_curated_loader_filters_ineligible_startups(tmp_path):

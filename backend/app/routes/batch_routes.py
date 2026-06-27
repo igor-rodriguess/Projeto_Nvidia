@@ -105,6 +105,23 @@ def cancel_batch(
     return service.repository.get_batch(batch_id)
 
 
+@router.get("/{batch_id}/dead-letters")
+def get_dead_letters(
+    batch_id: UUID,
+    service: BatchProcessingService = Depends(get_batch_service),
+) -> list[dict[str, Any]]:
+    return service.repository.list_dead_letters(batch_id)
+
+
+@router.post("/dead-letters/{dead_letter_id}/replay", status_code=status.HTTP_202_ACCEPTED)
+def replay_dead_letter(
+    dead_letter_id: UUID,
+    service: BatchProcessingService = Depends(get_batch_service),
+) -> dict[str, str]:
+    item_id = service.repository.replay_dead_letter(dead_letter_id)
+    return {"status": "queued", "batch_item_id": str(item_id)}
+
+
 def _batch_response(service: BatchProcessingService, batch_id: UUID) -> dict[str, Any]:
     try:
         batch = service.repository.get_batch(batch_id)
