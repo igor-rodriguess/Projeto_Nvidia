@@ -26,6 +26,8 @@ O schema `nvidia_inception` contém:
 - `recommendation_refinements`: tecnologias priorizadas, roadmap e fit final.
 - `impact_estimates`: estimativas fundamentadas, KPIs e índice agregado.
 - `executive_briefings`: briefing executivo final em Markdown.
+- `batch_runs`: progresso, opções e totais de cada processamento em lote.
+- `batch_items`: estado, tentativas e resultado resumido de cada startup do lote.
 
 ## Aplicar a migration
 

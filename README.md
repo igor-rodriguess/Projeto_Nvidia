@@ -102,3 +102,16 @@ classificações, recomendações, estimativas de impacto e briefings. Traces gr
 
 As instruções e a migration estão em
 [backend/app/persistence/README.md](backend/app/persistence/README.md).
+
+## API e lotes
+
+A API FastAPI permite processar automaticamente a base CURATED, acompanhar cada
+startup e retomar lotes interrompidos. Para iniciar localmente:
+
+```bash
+cd backend
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+A documentação interativa fica em `http://127.0.0.1:8000/docs`. O guia de endpoints,
+CLI e retomada está em [docs/backend_api.md](docs/backend_api.md).
