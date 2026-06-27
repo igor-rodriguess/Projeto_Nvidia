@@ -19,6 +19,7 @@ def test_ai_evidence_pipeline_runs_planner_and_scraper_together(tmp_path, monkey
         respect_robots=False,
         salvar_resultado=True,
         output_dir=tmp_path,
+        validation_output_dir=tmp_path,
     )
 
     assert resultado["startup"] == "Clara Pagamentos"
@@ -26,4 +27,6 @@ def test_ai_evidence_pipeline_runs_planner_and_scraper_together(tmp_path, monkey
     assert resultado["plano"]["tarefas"]
     assert len(resultado["plano"]["tarefas"]) == len(resultado["plano"]["plano_consultas"]) + 1
     assert resultado["coleta"]["metricas"]["tarefas_executadas"] == len(resultado["plano"]["tarefas"])
+    assert "resumo_consolidado" in resultado["validacao"]
     assert resultado["arquivo_saida"] is not None
+    assert resultado["arquivo_validacao"] is not None

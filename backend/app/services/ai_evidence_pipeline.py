@@ -5,6 +5,10 @@ from typing import Any
 
 import requests
 
+from app.agents.evidence_validator_agent import (
+    salvar_validacao_evidencias,
+    validar_evidencias_scraper,
+)
 from app.agents.scraper_agent import executar_scraper_agent, salvar_resultado_scraper
 from app.agents.search_planner_agent import planejar_busca_ia_startup
 
@@ -17,6 +21,8 @@ def executar_pipeline_investigacao_ia(
     respect_robots: bool = True,
     salvar_resultado: bool = True,
     output_dir: Path | None = None,
+    validation_output_dir: Path | None = None,
+    verificar_urls: bool = True,
 ) -> dict[str, Any]:
     plano = planejar_busca_ia_startup(startup, contexto=contexto)
     coleta = executar_scraper_agent(
@@ -25,15 +31,28 @@ def executar_pipeline_investigacao_ia(
         delay_seconds=delay_seconds,
         respect_robots=respect_robots,
     )
+    validacao = validar_evidencias_scraper(
+        coleta,
+        site_oficial=plano.get("site_oficial"),
+        session=session,
+        verificar_urls=verificar_urls,
+    )
 
     output_path = None
+    validation_output_path = None
     if salvar_resultado:
         output_path = salvar_resultado_scraper(coleta, output_dir=output_dir)
+        validation_output_path = salvar_validacao_evidencias(
+            validacao,
+            output_dir=validation_output_dir,
+        )
 
     return {
         "startup": plano["startup"],
         "status": coleta["status"],
         "plano": plano,
         "coleta": coleta,
+        "validacao": validacao,
         "arquivo_saida": str(output_path) if output_path else None,
+        "arquivo_validacao": str(validation_output_path) if validation_output_path else None,
     }

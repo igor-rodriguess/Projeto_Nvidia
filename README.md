@@ -24,3 +24,30 @@ Apoiar a NVIDIA na identificação de startups brasileiras com uso intensivo de 
 - Priorização de startups com maior fit.
 - Sugestão de próxima ação para o time NVIDIA.
 - Identificação de contatos públicos de founders ou decisores.
+
+## Pipeline atual
+
+```text
+Cubo Itaú
+  -> dados raw
+  -> dados processed
+  -> dados curated
+  -> Search Planner Agent
+  -> Scraper Agent
+  -> Evidence Validator Agent
+```
+
+O Evidence Validator Agent audita os resultados coletados, remove URLs quebradas,
+homônimos e menções irrelevantes, classifica a credibilidade das fontes e identifica
+evidências de IA. O resultado consolidado será a entrada do futuro AI Maturity
+Classifier.
+
+Para investigar uma startup da base curated:
+
+```bash
+cd backend
+python scripts/investigar_startup_ia.py data/curated/_cubo/<arquivo>.json "Nome da Startup"
+```
+
+As coletas brutas são salvas em `backend/data/raw/_evidencias/` e as evidências
+validadas em `backend/data/processed/_evidencias/`.
