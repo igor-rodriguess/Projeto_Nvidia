@@ -36,6 +36,7 @@ Cubo Itaú
   -> Scraper Agent
   -> Evidence Validator Agent
   -> AI Maturity Classifier Agent
+  -> NVIDIA Recommender RAG
 ```
 
 O Evidence Validator Agent audita os resultados coletados, remove URLs quebradas,
@@ -58,3 +59,33 @@ python scripts/investigar_startup_ia.py data/curated/_cubo/<arquivo>.json "Nome 
 As coletas brutas são salvas em `backend/data/raw/_evidencias/` e as evidências
 validadas em `backend/data/processed/_evidencias/`.
 As classificações são salvas em `backend/data/curated/_maturidade_ia/`.
+
+## Execução local
+
+```bash
+docker compose up -d qdrant searxng
+cd backend
+python -m pip install -r requirements.txt
+```
+
+Crie `backend/.env` a partir de `backend/.env.example`. O modo padrão usa embeddings
+FastEmbed locais e geração determinística, portanto não exige uma chave OpenAI. A
+chave Firecrawl continua opcional para páginas que dependem de JavaScript.
+
+Para ingerir a documentação oficial NVIDIA:
+
+```bash
+python scripts/ingest_nvidia_knowledge.py
+```
+
+Para executar os cinco agentes:
+
+```bash
+python scripts/run_enterprise_pipeline.py "Nome da Startup" "https://startup.com"
+```
+
+O resultado contém `trace` com a saída, duração, tentativas, tokens e erros de cada
+agente. Resultados intermediários são cacheados em `backend/data/cache/pipeline/`.
+
+Mais detalhes estão em [docs/rag_architecture.md](docs/rag_architecture.md) e
+[docs/operations.md](docs/operations.md).
