@@ -212,6 +212,8 @@ create table if not exists nvidia_inception.batch_runs (
   failed_items integer not null default 0 check (failed_items >= 0),
   options jsonb not null default '{}'::jsonb,
   errors jsonb not null default '[]'::jsonb,
+  worker_id text,
+  heartbeat_at timestamptz,
   started_at timestamptz,
   finished_at timestamptz,
   created_at timestamptz not null default now(),
@@ -221,6 +223,11 @@ create table if not exists nvidia_inception.batch_runs (
     succeeded_items + partial_items + failed_items <= processed_items
   )
 );
+
+alter table nvidia_inception.batch_runs
+  add column if not exists worker_id text;
+alter table nvidia_inception.batch_runs
+  add column if not exists heartbeat_at timestamptz;
 
 create table if not exists nvidia_inception.batch_items (
   id uuid primary key default gen_random_uuid(),
@@ -271,6 +278,9 @@ create index if not exists executive_briefings_run_id_idx
   on nvidia_inception.executive_briefings(pipeline_run_id);
 create index if not exists batch_runs_status_idx
   on nvidia_inception.batch_runs(status);
+create index if not exists batch_runs_heartbeat_idx
+  on nvidia_inception.batch_runs(heartbeat_at)
+  where status = 'running';
 create index if not exists batch_items_batch_status_idx
   on nvidia_inception.batch_items(batch_run_id, status);
 create index if not exists batch_items_pipeline_run_id_idx

@@ -6,6 +6,9 @@ from app.main import app
 from app.routes.dependencies import get_batch_service, get_persistence
 
 
+AUTH = {"X-API-Key": "test-api-key"}
+
+
 class FakeBatchRepository:
     def __init__(self):
         self.batch_id = uuid4()
@@ -81,24 +84,49 @@ def test_health_endpoint():
     assert response.json()["status"] == "ok"
 
 
-def test_create_batch_schedules_background_execution():
+def test_create_batch_queues_for_external_worker(monkeypatch):
+    monkeypatch.setenv("BACKEND_API_KEY", "test-api-key")
     service = FakeBatchService()
     app.dependency_overrides[get_batch_service] = lambda: service
     try:
         with TestClient(app) as client:
-            response = client.post("/api/v1/batches", json={"limit": 2, "auto_start": True})
+            response = client.post("/api/v1/batches", json={"limit": 2}, headers=AUTH)
         assert response.status_code == 202
-        assert service.runs == [(service.repository.batch_id, False)]
+        assert service.runs == []
     finally:
         app.dependency_overrides.clear()
 
 
-def test_list_startups_uses_backend_persistence():
+def test_list_startups_uses_backend_persistence(monkeypatch):
+    monkeypatch.setenv("BACKEND_API_KEY", "test-api-key")
+    app.dependency_overrides[get_persistence] = lambda: FakePersistence()
+    try:
+        with TestClient(app) as client:
+            response = client.get("/api/v1/startups", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json()[0]["nome"] == "Alpha"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_protected_endpoint_rejects_missing_api_key(monkeypatch):
+    monkeypatch.setenv("BACKEND_API_KEY", "test-api-key")
     app.dependency_overrides[get_persistence] = lambda: FakePersistence()
     try:
         with TestClient(app) as client:
             response = client.get("/api/v1/startups")
+        assert response.status_code == 401
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_metrics_are_exposed_with_authentication(monkeypatch):
+    monkeypatch.setenv("BACKEND_API_KEY", "test-api-key")
+    app.dependency_overrides[get_persistence] = lambda: FakePersistence()
+    try:
+        with TestClient(app) as client:
+            response = client.get("/metrics", headers=AUTH)
         assert response.status_code == 200
-        assert response.json()[0]["nome"] == "Alpha"
+        assert "nvidia_radar_pipeline_runs_total" not in response.text
     finally:
         app.dependency_overrides.clear()

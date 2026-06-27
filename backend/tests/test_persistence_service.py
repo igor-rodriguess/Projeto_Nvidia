@@ -52,6 +52,9 @@ class FakeQuery:
         self.limit_count = count
         return self
 
+    def order(self, field, desc=False):
+        return self
+
     def execute(self):
         rows = self.database.rows.setdefault(self.table_name, [])
         if self.operation == "select":

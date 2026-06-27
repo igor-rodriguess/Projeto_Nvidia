@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Iterable
 from uuid import UUID
 
@@ -97,6 +97,73 @@ class BatchRepository:
         if not current.get("started_at"):
             updates["started_at"] = datetime.now(UTC).isoformat()
         self._update_batch(batch_id, updates)
+
+    def queue_batch(self, batch_id: UUID) -> None:
+        current = self.get_batch(batch_id)
+        if current["status"] == "completed":
+            raise ValueError("Lote concluido nao pode ser reenfileirado")
+        self._update_batch(
+            batch_id,
+            {
+                "status": "pending",
+                "worker_id": None,
+                "heartbeat_at": None,
+                "finished_at": None,
+            },
+        )
+
+    def claim_next_batch(self, worker_id: str) -> dict[str, Any] | None:
+        candidates = (
+            self.db.table("batch_runs")
+            .select("*")
+            .eq("status", "pending")
+            .order("created_at")
+            .limit(5)
+            .execute()
+        )
+        now = datetime.now(UTC).isoformat()
+        for candidate in list(getattr(candidates, "data", None) or []):
+            response = (
+                self.db.table("batch_runs")
+                .update(
+                    {
+                        "status": "running",
+                        "worker_id": worker_id,
+                        "heartbeat_at": now,
+                        "started_at": candidate.get("started_at") or now,
+                        "finished_at": None,
+                    }
+                )
+                .eq("id", candidate["id"])
+                .eq("status", "pending")
+                .execute()
+            )
+            data = getattr(response, "data", None) or []
+            if data:
+                return data[0]
+            current = self.get_batch(UUID(candidate["id"]))
+            if current.get("worker_id") == worker_id and current.get("status") == "running":
+                return current
+        return None
+
+    def heartbeat(self, batch_id: UUID, worker_id: str) -> None:
+        self.db.table("batch_runs").update(
+            {"heartbeat_at": datetime.now(UTC).isoformat()}
+        ).eq("id", str(batch_id)).eq("worker_id", worker_id).eq("status", "running").execute()
+
+    def recover_stale_batches(self, stale_after_minutes: int = 30) -> int:
+        threshold = datetime.now(UTC) - timedelta(minutes=stale_after_minutes)
+        response = self.db.table("batch_runs").select("*").eq("status", "running").execute()
+        recovered = 0
+        for batch in list(getattr(response, "data", None) or []):
+            heartbeat = _parse_datetime(batch.get("heartbeat_at") or batch.get("updated_at"))
+            if heartbeat is not None and heartbeat >= threshold:
+                continue
+            batch_id = UUID(batch["id"])
+            self.recover_interrupted_items(batch_id)
+            self.queue_batch(batch_id)
+            recovered += 1
+        return recovered
 
     def recover_interrupted_items(self, batch_id: UUID) -> int:
         running = self.list_items(batch_id, statuses={"running"})
@@ -213,6 +280,7 @@ class BatchRepository:
             {
                 "status": "failed",
                 "errors": errors,
+                "heartbeat_at": datetime.now(UTC).isoformat(),
                 "finished_at": datetime.now(UTC).isoformat(),
             },
         )
@@ -243,3 +311,13 @@ def _first_required(response: Any, operation: str) -> dict[str, Any]:
     if not isinstance(row, dict):
         raise PersistenceError(operation)
     return row
+
+
+def _parse_datetime(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+    except ValueError:
+        return None

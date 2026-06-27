@@ -206,6 +206,8 @@ class BatchRun(PersistenceModel):
     failed_items: int = Field(default=0, ge=0)
     options: dict[str, Any] = Field(default_factory=dict)
     errors: list[str] = Field(default_factory=list)
+    worker_id: str | None = None
+    heartbeat_at: datetime | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None
     created_at: datetime | None = None

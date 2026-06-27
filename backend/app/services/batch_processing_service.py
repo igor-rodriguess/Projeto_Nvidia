@@ -126,7 +126,12 @@ class BatchProcessingService:
         LOGGER.info("batch_created", batch_id=str(batch_id), total_items=len(selected))
         return batch_id
 
-    def run_batch(self, batch_id: UUID, resume: bool = False) -> dict[str, Any]:
+    def run_batch(
+        self,
+        batch_id: UUID,
+        resume: bool = False,
+        worker_id: str | None = None,
+    ) -> dict[str, Any]:
         batch = self.repository.get_batch(batch_id)
         if batch["status"] == "running" and not resume:
             raise ValueError("Lote ja esta em execucao")
@@ -142,8 +147,12 @@ class BatchProcessingService:
         for item in pending:
             if self.repository.is_cancelled(batch_id):
                 break
+            if worker_id:
+                self.repository.heartbeat(batch_id, worker_id)
             failed = not self._process_item(item)
             self.repository.finalize_batch(batch_id)
+            if worker_id:
+                self.repository.heartbeat(batch_id, worker_id)
             if failed and options.stop_on_error:
                 break
         final = self.repository.finalize_batch(batch_id)
@@ -155,6 +164,17 @@ class BatchProcessingService:
             total=final["total_items"],
         )
         return final
+
+    def queue_batch(self, batch_id: UUID, resume: bool = False) -> dict[str, Any]:
+        batch = self.repository.get_batch(batch_id)
+        if batch["status"] == "running":
+            raise ValueError("Lote em execucao nao pode ser reenfileirado")
+        options = BatchExecutionOptions.model_validate(batch.get("options") or {})
+        self.repository.recover_interrupted_items(batch_id)
+        if resume:
+            self.repository.requeue_retryable_items(batch_id, options.max_attempts)
+        self.repository.queue_batch(batch_id)
+        return self.repository.get_batch(batch_id)
 
     def _process_item(self, item: dict[str, Any]) -> bool:
         item_id = UUID(item["id"])

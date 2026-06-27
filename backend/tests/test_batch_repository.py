@@ -50,3 +50,16 @@ def test_batch_repository_recovers_interrupted_items():
     assert recovered == 1
     assert item["status"] == "pending"
     assert "interrompida" in item["last_error"]
+
+
+def test_batch_repository_claims_pending_batch_once():
+    client = FakeSupabase()
+    repository = BatchRepository(PipelinePersistence(client=client))
+    batch_id = repository.create_batch("data/curated/base.json", [_startup(1)])
+
+    claimed = repository.claim_next_batch("worker-a")
+    second_claim = repository.claim_next_batch("worker-b")
+
+    assert claimed["id"] == str(batch_id)
+    assert claimed["worker_id"] == "worker-a"
+    assert second_claim is None

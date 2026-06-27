@@ -7,9 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.persistence.persistence_service import PipelinePersistence
 from app.routes.dependencies import get_persistence
+from app.routes.auth import require_api_key
 
 
-router = APIRouter(prefix="/api/v1", tags=["analyses"])
+router = APIRouter(
+    prefix="/api/v1",
+    tags=["analyses"],
+    dependencies=[Depends(require_api_key)],
+)
 
 
 @router.get("/startups")
