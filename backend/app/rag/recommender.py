@@ -43,6 +43,10 @@ class NVIDIARecommenderRAG:
             )
             reranked = self.reranker.rerank(query, retrieved, top_n=self.config.top_n)
             result = self.generator.generate(profile, reranked)
+            if not result.recomendacoes and len(retrieved) > len(reranked):
+                expanded_top_n = min(len(retrieved), 20)
+                reranked = self.reranker.rerank(query, retrieved, top_n=expanded_top_n)
+                result = self.generator.generate(profile, reranked)
             metrics["retrieved_count"] = len(retrieved)
             metrics["reranked_count"] = len(reranked)
             metrics["result_count"] = len(result.recomendacoes)

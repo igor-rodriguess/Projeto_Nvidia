@@ -74,10 +74,24 @@ class GroundedRecommendationGenerator:
             recommendations.append(recommendation)
 
         recommendations.sort(key=lambda item: item["fit_score"], reverse=True)
+        recommended_technologies = {
+            str(item["tecnologia"]) for item in recommendations[:5]
+        }
+        utilized_chunks = []
+        seen_chunks: set[str] = set()
+        for chunk in chunks:
+            if chunk.metadata.tecnologia not in recommended_technologies:
+                continue
+            if chunk.chunk_id in seen_chunks:
+                continue
+            utilized_chunks.append(chunk.model_dump(mode="json"))
+            seen_chunks.add(chunk.chunk_id)
+            if len(utilized_chunks) == 5:
+                break
         payload = {
             "startup": profile.startup,
             "recomendacoes": recommendations[:5],
-            "chunks_utilizados": [chunk.model_dump(mode="json") for chunk in chunks[:5]],
+            "chunks_utilizados": utilized_chunks,
             "aviso": None if recommendations else "Nenhum chunk compatível foi recuperado; nenhuma recomendação foi inferida.",
         }
         return validate_contract(NVIDIARecommendationOutput, payload)

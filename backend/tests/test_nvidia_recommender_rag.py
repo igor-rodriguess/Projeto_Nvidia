@@ -126,3 +126,42 @@ def test_recommender_accepts_technology_identified_by_official_metadata():
 
     assert [item.tecnologia for item in result.recomendacoes] == ["Triton"]
     assert "triton-metadata" in result.recomendacoes[0].citacoes[0]
+
+
+def test_recommender_expands_reranking_when_initial_window_has_no_support():
+    irrelevant = [
+        RetrievedChunk(
+            chunk_id=f"irrelevant-{index}",
+            content="General program information and available countries.",
+            metadata=KnowledgeMetadata(
+                tecnologia="Inception",
+                tipo="documentacao",
+                dores_relacionadas=["latencia"],
+                perfil_aplicavel=["AI-native"],
+                titulo_secao="Countries",
+                url_fonte="https://www.nvidia.com/en-us/startups/",
+            ),
+            retrieval_score=1.0 - index * 0.01,
+        )
+        for index in range(5)
+    ]
+    supported = _retrieved("triton-late", "Triton", 0.7)
+
+    class ExpandingStore:
+        def hybrid_search(self, query, top_k, profile):
+            return [*irrelevant, supported]
+
+    class StableReranker:
+        def rerank(self, query, chunks, top_n):
+            return chunks[:top_n]
+
+    rag = NVIDIARecommenderRAG(
+        store=ExpandingStore(),
+        reranker=StableReranker(),
+        config=RAGConfig(top_k=20, top_n=5),
+    )
+
+    result = rag.recommend(_profile())
+
+    assert [item.tecnologia for item in result.recomendacoes] == ["Triton"]
+    assert [chunk.chunk_id for chunk in result.chunks_utilizados] == ["triton-late"]
