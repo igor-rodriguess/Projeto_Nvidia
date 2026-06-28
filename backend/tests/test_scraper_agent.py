@@ -6,6 +6,7 @@ import requests
 from app.agents.scraper_agent import (
     FirecrawlClient,
     FirecrawlSearchClient,
+    ScraperAgent,
     executar_scraper_agent,
     salvar_resultado_scraper,
 )
@@ -489,3 +490,21 @@ def test_scraper_agent_isolates_unexpected_search_provider_error():
     assert resultado["metricas"]["tarefas_executadas"] == 1
     assert resultado["metricas"]["tarefas_com_erro"] == 1
     assert resultado["erros"][0]["erro"] == "No results found."
+
+
+def test_adaptive_stop_requires_tasks_sources_pages_and_layer(monkeypatch):
+    monkeypatch.setenv("SCRAPER_MIN_TASKS", "8")
+    monkeypatch.setenv("SCRAPER_MIN_UNIQUE_SOURCES", "10")
+    monkeypatch.setenv("SCRAPER_MIN_FULL_PAGES", "3")
+    metrics = {"tarefas_executadas": 8, "total_paginas_coletadas": 3}
+
+    assert ScraperAgent._coverage_is_sufficient(
+        metrics,
+        {f"https://source{index}.example" for index in range(10)},
+        highest_layer=4,
+    )
+    assert not ScraperAgent._coverage_is_sufficient(
+        metrics,
+        {"https://one.example"},
+        highest_layer=4,
+    )

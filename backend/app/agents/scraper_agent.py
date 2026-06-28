@@ -598,9 +598,13 @@ class ScraperAgent:
             "total_paginas_coletadas": 0,
             "fontes_complementares_consultadas": 0,
             "tempo_total_execucao_segundos": 0.0,
+            "tarefas_puladas_por_cobertura": 0,
+            "parada_adaptativa": False,
         }
 
-        for tarefa in tarefas:
+        unique_urls: set[str] = set()
+        highest_layer = 0
+        for index, tarefa in enumerate(tarefas):
             resultado, task_errors = self._executar_tarefa(tarefa)
             resultados.append(resultado)
             erros.extend(task_errors)
@@ -610,9 +614,19 @@ class ScraperAgent:
             metricas["total_paginas_coletadas"] += len(resultado.get("paginas_completas", []))
             if resultado.get("conteudo_markdown") or resultado.get("conteudo_textual"):
                 metricas["total_paginas_coletadas"] += 1
+            unique_urls.update(
+                item.get("url")
+                for item in resultado.get("resultados_busca", [])
+                if item.get("url")
+            )
+            highest_layer = max(highest_layer, int(tarefa.get("camada") or 0))
+            if self._coverage_is_sufficient(metricas, unique_urls, highest_layer):
+                metricas["parada_adaptativa"] = True
+                metricas["tarefas_puladas_por_cobertura"] = len(tarefas) - index - 1
+                break
 
         complementary = []
-        if plano.get("varredura_complementar"):
+        if plano.get("varredura_complementar") and not metricas["parada_adaptativa"]:
             complementary, complementary_errors = self._executar_varredura_complementar(startup)
             erros.extend(complementary_errors)
             metricas["fontes_complementares_consultadas"] = len(complementary)
@@ -642,6 +656,22 @@ class ScraperAgent:
             "varredura_complementar": complementary,
             "erros": erros,
         }
+
+    @staticmethod
+    def _coverage_is_sufficient(
+        metrics: dict[str, Any],
+        unique_urls: set[str],
+        highest_layer: int,
+    ) -> bool:
+        minimum_tasks = int(os.getenv("SCRAPER_MIN_TASKS", "8"))
+        minimum_sources = int(os.getenv("SCRAPER_MIN_UNIQUE_SOURCES", "10"))
+        minimum_pages = int(os.getenv("SCRAPER_MIN_FULL_PAGES", "3"))
+        return (
+            metrics["tarefas_executadas"] >= minimum_tasks
+            and len(unique_urls) >= minimum_sources
+            and metrics["total_paginas_coletadas"] >= minimum_pages
+            and highest_layer >= 4
+        )
 
     def _executar_tarefa(self, tarefa: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         tipo = tarefa.get("tipo")
