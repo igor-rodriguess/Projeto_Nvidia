@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from threading import Event
 
+import requests
+
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -21,7 +23,18 @@ def main() -> int:
     parser.add_argument("--poll-seconds", type=float, default=5.0)
     parser.add_argument("--stale-after-minutes", type=int, default=30)
     parser.add_argument("--worker-id")
+    parser.add_argument("--smoke", action="store_true", help="Valida imagem e dependencias locais.")
     args = parser.parse_args()
+
+    if args.smoke:
+        qdrant = os.getenv("QDRANT_URL", "http://localhost:6333").rstrip("/")
+        searxng = os.getenv("SEARXNG_BASE_URL", "http://localhost:8080").rstrip("/")
+        for name, url in (("qdrant", qdrant), ("searxng", searxng)):
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            print(f"{name}=ok")
+        print("worker_imports=ok")
+        return 0
 
     worker_id = args.worker_id or f"{socket.gethostname()}-{os.getpid()}"
     worker = BatchWorkerService(BatchProcessingService.from_env(), worker_id)

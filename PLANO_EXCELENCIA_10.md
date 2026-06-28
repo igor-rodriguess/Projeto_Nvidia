@@ -154,8 +154,12 @@ Atualizado em 27 de junho de 2026:
 - Concluído: scan Gitleaks do histórico, sem achados versionados.
 - Concluído: lease com heartbeat, tentativas limitadas, DLQ e replay.
 - Concluído: `InceptionFitAgent` conservador, persistência e seção de aderência no briefing.
-- Concluído: CI de pull request com Ruff, mypy, 104 testes, Gitleaks e build Docker.
+- Concluído: CI de pull request com Ruff, mypy, 121 testes, Gitleaks e build Docker.
 - Concluído: JWT Supabase por JWKS, RBAC, denylist de revogação e rate limit atômico.
+- Concluído: retenção em dry-run/execução, backup com checksum e restore isolado.
+- Concluído: runbook de deploy, rollback, credenciais, DLQ e indisponibilidade.
+- Concluído: carga cached de 100 itens/2 workers e caos de lease sem duplicação.
+- Concluído: smoke Docker no CI, imagem imutável no GHCR e migration manual protegida.
 - Concluído: cache Firecrawl de sete dias, hash de opções, limites por startup e
   lote, reserva atômica, alerta de 80% e métricas de custo/falha.
 - Pendente externo: rotação das chaves Supabase e Firecrawl pelo proprietário.

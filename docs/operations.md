@@ -71,6 +71,10 @@ python -m pytest -q
 O workflow `.github/workflows/backend-ci.yml` executa em pull requests e pushes para
 `main`: lint de erros críticos, type check dos contratos e da avaliação, testes,
 scan Gitleaks do histórico completo e build da imagem Docker sem segredos.
+O CI também sobe Qdrant, SearXNG e API, executa o smoke do worker e encerra todos os
+recursos. Em `main`, publica a imagem no GHCR com tag imutável do SHA. A migration
+fica em workflow manual associado ao environment `production`, que deve possuir
+revisor obrigatório e o secret `DATABASE_URL`.
 
 Para reproduzir a etapa de qualidade localmente:
 
