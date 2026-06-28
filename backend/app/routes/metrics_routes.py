@@ -9,21 +9,27 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import PlainTextResponse
 
 from app.persistence.persistence_service import PipelinePersistence
+from app.routes.auth import require_metrics_token
 from app.routes.security import enforce_security
 from app.routes.dependencies import get_persistence
 
 
-router = APIRouter(tags=["metrics"], dependencies=[Depends(enforce_security)])
+router = APIRouter(tags=["metrics"])
 
 
-@router.get("/api/v1/metrics")
+@router.get("/api/v1/metrics", dependencies=[Depends(enforce_security)])
 def metrics_json(
     persistence: PipelinePersistence = Depends(get_persistence),
 ) -> dict[str, object]:
     return _collect_metrics(persistence)
 
 
-@router.get("/metrics", response_class=PlainTextResponse, include_in_schema=False)
+@router.get(
+    "/metrics",
+    response_class=PlainTextResponse,
+    include_in_schema=False,
+    dependencies=[Depends(require_metrics_token)],
+)
 def metrics_prometheus(
     persistence: PipelinePersistence = Depends(get_persistence),
 ) -> PlainTextResponse:

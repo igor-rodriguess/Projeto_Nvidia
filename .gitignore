@@ -5,3 +5,5 @@ __pycache__/
 backend/data/cache/
 backend/data/curated/_pipeline_runs/
 backend/data/backups/
+infra/secrets/*
+!infra/secrets/README.md

@@ -158,11 +158,13 @@ def test_run_detail_exposes_inception_fit(monkeypatch):
 
 
 def test_metrics_are_exposed_with_authentication(monkeypatch):
-    monkeypatch.setenv("BACKEND_API_KEY", "test-api-key")
+    monkeypatch.setenv("METRICS_BEARER_TOKEN", "test-metrics-token")
     app.dependency_overrides[get_persistence] = lambda: FakePersistence()
     try:
         with TestClient(app) as client:
-            response = client.get("/metrics", headers=AUTH)
+            response = client.get(
+                "/metrics", headers={"Authorization": "Bearer test-metrics-token"}
+            )
         assert response.status_code == 200
         assert "nvidia_radar_pipeline_runs_total" not in response.text
     finally:

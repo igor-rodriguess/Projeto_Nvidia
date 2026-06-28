@@ -160,6 +160,7 @@ Atualizado em 27 de junho de 2026:
 - Concluído: runbook de deploy, rollback, credenciais, DLQ e indisponibilidade.
 - Concluído: carga cached de 100 itens/2 workers e caos de lease sem duplicação.
 - Concluído: smoke Docker no CI, imagem imutável no GHCR e migration manual protegida.
+- Concluído: Prometheus autenticado e regras testadas para worker, backlog e Firecrawl.
 - Concluído: cache Firecrawl de sete dias, hash de opções, limites por startup e
   lote, reserva atômica, alerta de 80% e métricas de custo/falha.
 - Pendente externo: rotação das chaves Supabase e Firecrawl pelo proprietário.

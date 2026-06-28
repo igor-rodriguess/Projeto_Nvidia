@@ -63,6 +63,20 @@ services:
       - backend_cache:/app/data/cache
     restart: unless-stopped
 
+  prometheus:
+    profiles: ["observability"]
+    image: prom/prometheus:v3.7.3
+    container_name: nvidia-ai-radar-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./infra/secrets/metrics_token:/run/secrets/metrics_token:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   qdrant_data:
   backend_cache:

@@ -24,6 +24,7 @@ class AuthenticatedPrincipal:
 
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 bearer_scheme = HTTPBearer(auto_error=False)
+metrics_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_current_principal(
@@ -84,6 +85,20 @@ def require_api_key(
 ) -> AuthenticatedPrincipal:
     """Compatibility alias for integrations migrating from API key to JWT."""
     return principal
+
+
+def require_metrics_token(
+    credentials: HTTPAuthorizationCredentials | None = Security(metrics_bearer_scheme),
+) -> None:
+    expected = os.getenv("METRICS_BEARER_TOKEN")
+    if not expected:
+        raise HTTPException(status_code=503, detail="METRICS_BEARER_TOKEN nao configurado")
+    if not credentials or not hmac.compare_digest(credentials.credentials, expected):
+        raise HTTPException(
+            status_code=401,
+            detail="Token de metricas invalido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 def _extract_role(claims: dict) -> Role:
