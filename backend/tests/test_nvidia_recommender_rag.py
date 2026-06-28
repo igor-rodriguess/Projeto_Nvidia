@@ -93,3 +93,36 @@ def test_recommender_skips_retrieval_for_non_ai_startup():
     assert result.recomendacoes == []
     assert result.aviso
     assert store.calls == []
+
+
+def test_recommender_accepts_technology_identified_by_official_metadata():
+    class MetadataStore:
+        def hybrid_search(self, query, top_k, profile):
+            return [
+                RetrievedChunk(
+                    chunk_id="triton-metadata",
+                    content="Deploy models with dynamic batching and concurrent execution.",
+                    metadata=KnowledgeMetadata(
+                        tecnologia="Triton",
+                        tipo="documentacao",
+                        dores_relacionadas=["latencia"],
+                        perfil_aplicavel=["AI-native", "AI-enabled"],
+                        titulo_secao="NVIDIA Triton Inference Server Documentation",
+                        url_fonte="https://docs.nvidia.com/deeplearning/triton-inference-server/",
+                    ),
+                    retrieval_score=0.9,
+                )
+            ]
+
+    rag = NVIDIARecommenderRAG(
+        store=MetadataStore(),
+        config=RAGConfig(top_k=10, top_n=3),
+    )
+    profile = _profile().model_copy(
+        update={"necessidades_limitacoes": ["Equipe especializada ainda nao comprovada"]}
+    )
+
+    result = rag.recommend(profile)
+
+    assert [item.tecnologia for item in result.recomendacoes] == ["Triton"]
+    assert "triton-metadata" in result.recomendacoes[0].citacoes[0]

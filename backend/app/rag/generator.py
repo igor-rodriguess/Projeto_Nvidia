@@ -150,12 +150,18 @@ def _citation(chunk: RetrievedChunk, signals: list[str]) -> str:
 
 
 def _chunk_is_grounded(chunk: RetrievedChunk, profile: AIMaturityOutput) -> bool:
-    content = chunk.content.lower()
+    searchable_evidence = " ".join(
+        (
+            chunk.content,
+            chunk.metadata.titulo_secao,
+            chunk.metadata.url_fonte,
+        )
+    ).lower()
     technology_terms = {
         chunk.metadata.tecnologia.lower(),
         chunk.metadata.tecnologia.lower().replace("-", " "),
     }
-    if any(term in content for term in technology_terms):
+    if any(term in searchable_evidence for term in technology_terms):
         return True
     return any(
         _chunk_supports_pain(chunk, pain)
