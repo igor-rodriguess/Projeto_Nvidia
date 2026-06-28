@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from functools import partial
 
 import requests
 
@@ -41,7 +42,7 @@ class NVIDIAKnowledgeIngestor:
             for source in selected_sources:
                 try:
                     document, _ = execute_with_retry(
-                        lambda current=source: self.loader.load(current),
+                        partial(self.loader.load, source),
                         stage=f"load:{source.tecnologia}",
                         retryable=(requests.RequestException, ValueError),
                         wait_multiplier=self.retry_wait_multiplier,

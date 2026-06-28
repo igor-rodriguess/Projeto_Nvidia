@@ -3,7 +3,7 @@ from __future__ import annotations
 import hmac
 import os
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, cast
 
 import jwt
 from fastapi import HTTPException, Security, status
@@ -110,7 +110,7 @@ def _extract_role(claims: dict) -> Role:
         or claims.get("radar_role")
         or "readonly"
     )
-    return role if role in {"admin", "analyst", "readonly"} else "readonly"
+    return cast(Role, role) if role in {"admin", "analyst", "readonly"} else "readonly"
 
 
 def _legacy_api_key_allowed() -> bool:

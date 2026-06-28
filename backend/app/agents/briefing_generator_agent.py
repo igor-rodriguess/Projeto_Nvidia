@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from typing import Any
 
@@ -145,7 +145,7 @@ def _recommendation_table(refined: Any) -> str:
     return "\n".join(rows)
 
 
-def _roadmap_lines(roadmap: dict[str, Any]) -> list[str]:
+def _roadmap_lines(roadmap: Mapping[Any, Any]) -> list[str]:
     labels = {
         "curto_prazo": "Curto prazo (1-3 meses)",
         "medio_prazo": "Medio prazo (3-6 meses)",

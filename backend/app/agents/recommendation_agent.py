@@ -71,7 +71,7 @@ class RecommendationAgent:
             )
 
         chunks_by_technology = _group_chunks(raw.chunks_utilizados)
-        ranked = []
+        ranked: list[dict[str, Any]] = []
         startup_text = " ".join(
             str(value) for value in data.startup_profile.values() if value
         ).lower()
@@ -109,7 +109,7 @@ class RecommendationAgent:
                 item["tecnologia"],
             )
         )
-        technologies = []
+        technologies: list[dict[str, Any]] = []
         for order, item in enumerate(ranked, start=1):
             item = dict(item)
             item.pop("raw_fit")
@@ -139,7 +139,10 @@ class RecommendationAgent:
         alerts: list[str],
     ) -> list[RetrievedChunk]:
         try:
-            results = self.store.hybrid_search(
+            store = self.store
+            if store is None:
+                return []
+            results = store.hybrid_search(
                 f"beneficios implementacao requisitos {technology}",
                 top_k=self.top_k,
                 profile=classification,

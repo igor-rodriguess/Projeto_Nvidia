@@ -588,10 +588,10 @@ class ScraperAgent:
         started_at = time.perf_counter()
         startup = _clean(plano.get("startup"))
         tarefas = _normalizar_tarefas(plano)
-        resultados = []
-        erros = []
+        resultados: list[dict[str, Any]] = []
+        erros: list[dict[str, Any]] = []
 
-        metricas = {
+        metricas: dict[str, Any] = {
             "tarefas_executadas": 0,
             "tarefas_com_erro": 0,
             "total_resultados_busca": 0,
@@ -625,7 +625,7 @@ class ScraperAgent:
                 metricas["tarefas_puladas_por_cobertura"] = len(tarefas) - index - 1
                 break
 
-        complementary = []
+        complementary: list[dict[str, Any]] = []
         if plano.get("varredura_complementar") and not metricas["parada_adaptativa"]:
             complementary, complementary_errors = self._executar_varredura_complementar(startup)
             erros.extend(complementary_errors)
@@ -692,7 +692,7 @@ class ScraperAgent:
         consulta = _clean(tarefa.get("consulta"))
         max_resultados = int(tarefa.get("max_resultados") or 10)
         search_results = self.search_client.search(consulta, max_resultados)
-        full_pages = []
+        full_pages: list[dict[str, Any]] = []
 
         for item in search_results:
             if not item["potencial_alto"] or len(full_pages) >= 3:

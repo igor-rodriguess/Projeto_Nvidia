@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 from app.core.observability import LOGGER
 from app.persistence.batch_repository import BatchRepository
+from app.persistence.models import BatchItemStatus
 from app.persistence.pipeline_with_persistence import run_pipeline_with_persistence
 from app.persistence.web_cache import web_usage_context
 
@@ -204,10 +205,10 @@ class BatchProcessingService:
         try:
             result = self.pipeline_runner(_pipeline_payload(item["startup_payload"]))
             result_status = result.get("status", "falha")
-            item_status = {
+            item_status = cast(BatchItemStatus, {
                 "completo": "completed",
                 "parcial": "partial",
-            }.get(result_status, "failed")
+            }.get(result_status, "failed"))
             run_id = _optional_uuid(result.get("pipeline_run_id"))
             error = _error_summary(result.get("errors", [])) if item_status != "completed" else None
             self.repository.finish_item(

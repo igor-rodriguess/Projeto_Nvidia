@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from collections import defaultdict
-from typing import Protocol
+from typing import Any, Protocol
 
 from app.core.contracts import validate_contract
 from app.core.schemas import (
@@ -48,7 +48,7 @@ class GroundedRecommendationGenerator:
             for values in profile.tecnologias_utilizadas.model_dump().values()
             for item in values
         }
-        recommendations = []
+        recommendations: list[dict[str, Any]] = []
         for technology, supporting in by_technology.items():
             pain_matches = sorted(
                 pain

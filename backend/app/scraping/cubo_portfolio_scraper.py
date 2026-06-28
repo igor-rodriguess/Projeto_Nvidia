@@ -355,9 +355,9 @@ def _parse_localizacao(value: Any) -> tuple[str | None, str | None]:
     for padrao in padroes:
         match = re.search(padrao, texto)
         if match:
-            cidade = _limpar_texto(match.group(1))
-            estado = _normalizar_estado(match.group(2))
-            return cidade, estado
+            parsed_cidade = _limpar_texto(match.group(1))
+            parsed_estado = _normalizar_estado(match.group(2))
+            return parsed_cidade, parsed_estado
 
     cidade_match = re.search(
         r"(?:Cidade|Localização|Localizacao)\s*:?\s*([A-Za-zÀ-ÿ .'-]{2,60})",
@@ -659,5 +659,3 @@ if __name__ == "__main__":
     )
     sys.stdout.buffer.write(payload.encode("utf-8"))
     sys.stdout.buffer.write(b"\n")
-
-## Rapha linda 

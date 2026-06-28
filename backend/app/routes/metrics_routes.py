@@ -20,7 +20,7 @@ router = APIRouter(tags=["metrics"])
 @router.get("/api/v1/metrics", dependencies=[Depends(enforce_security)])
 def metrics_json(
     persistence: PipelinePersistence = Depends(get_persistence),
-) -> dict[str, object]:
+) -> dict[str, dict[str, int | float]]:
     return _collect_metrics(persistence)
 
 
@@ -54,12 +54,14 @@ def _collect_metrics(persistence: PipelinePersistence) -> dict[str, dict[str, in
     return metrics
 
 
-def _status_counts(persistence: PipelinePersistence, table: str) -> dict[str, int]:
+def _status_counts(persistence: PipelinePersistence, table: str) -> dict[str, int | float]:
     response = persistence.db.table(table).select("status").execute()
     return dict(Counter(row["status"] for row in (response.data or [])))
 
 
-def _worker_metrics(persistence: PipelinePersistence) -> dict[str, dict[str, int]]:
+def _worker_metrics(
+    persistence: PipelinePersistence,
+) -> dict[str, dict[str, int | float]]:
     response = (
         persistence.db.table("batch_runs")
         .select("status,lease_expires_at")
@@ -68,12 +70,11 @@ def _worker_metrics(persistence: PipelinePersistence) -> dict[str, dict[str, int
     )
     active = list(response.data or [])
     now = datetime.now(UTC)
-    stale = sum(
-        1
-        for row in active
-        if _parse_datetime(row.get("lease_expires_at")) is None
-        or _parse_datetime(row.get("lease_expires_at")) <= now
-    )
+    stale = 0
+    for row in active:
+        lease_expires_at = _parse_datetime(row.get("lease_expires_at"))
+        if lease_expires_at is None or lease_expires_at <= now:
+            stale += 1
     return {"workers": {"active_leases": len(active), "stale_leases": stale}}
 
 
@@ -110,7 +111,7 @@ def _parse_datetime(value: Any) -> datetime | None:
 
 def _derive_alerts(
     metrics: dict[str, dict[str, int | float]],
-) -> dict[str, int]:
+) -> dict[str, int | float]:
     workers = metrics.get("workers", {})
     batch_items = metrics.get("batch_items", {})
     requests = metrics.get("external_api_requests", {})

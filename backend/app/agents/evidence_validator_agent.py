@@ -252,7 +252,8 @@ def salvar_validacao_evidencias(
 
 
 def _normalizar_evidencias(dados: dict[str, Any]) -> list[dict[str, Any]]:
-    raw = dados.get("dados_brutos") if isinstance(dados.get("dados_brutos"), dict) else dados
+    raw_candidate = dados.get("dados_brutos")
+    raw: dict[str, Any] = raw_candidate if isinstance(raw_candidate, dict) else dados
     by_url: dict[str, dict[str, Any]] = {}
 
     search_groups = raw.get("resultados_buscas") or raw.get("resultados_busca") or []

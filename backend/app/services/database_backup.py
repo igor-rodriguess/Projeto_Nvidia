@@ -31,13 +31,13 @@ def create_backup(database_url: str, output_dir: Path) -> tuple[Path, Path]:
         POSTGRES_IMAGE,
         "pg_dump",
         "--host",
-        connection["host"],
+        str(connection["host"]),
         "--port",
         str(connection["port"]),
         "--username",
-        connection["username"],
+        str(connection["username"]),
         "--dbname",
-        connection["database"],
+        str(connection["database"]),
         "--schema",
         "nvidia_inception",
         "--format=custom",
@@ -46,7 +46,7 @@ def create_backup(database_url: str, output_dir: Path) -> tuple[Path, Path]:
         "--file",
         f"/backups/{filename}",
     ]
-    _run(command, connection["password"])
+    _run(command, str(connection["password"]))
     backup_path = output_dir / filename
     manifest_path = backup_path.with_suffix(".manifest.json")
     manifest = {
@@ -83,20 +83,20 @@ def restore_backup(
         POSTGRES_IMAGE,
         "pg_restore",
         "--host",
-        target["host"],
+        str(target["host"]),
         "--port",
         str(target["port"]),
         "--username",
-        target["username"],
+        str(target["username"]),
         "--dbname",
-        target["database"],
+        str(target["database"]),
         "--clean",
         "--if-exists",
         "--no-owner",
         "--no-privileges",
         f"/backups/{backup_path.name}",
     ]
-    _run(command, target["password"])
+    _run(command, str(target["password"]))
 
 
 def _bootstrap_restore_target(target: dict[str, str | int]) -> None:

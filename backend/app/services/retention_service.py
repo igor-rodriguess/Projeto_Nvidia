@@ -83,9 +83,10 @@ class RetentionService:
         return actions
 
     def _trace_actions(self, now: datetime) -> list[RetentionAction]:
+        persistence = self._require_persistence()
         cutoff = now - timedelta(days=self.policy.trace_days)
         response = (
-            self.persistence.db.table("pipeline_runs")
+            persistence.db.table("pipeline_runs")
             .select("id,trace_path,created_at")
             .lt("created_at", cutoff.isoformat())
             .execute()
@@ -106,20 +107,26 @@ class RetentionService:
             path.unlink(missing_ok=True)
 
     def _execute_database(self, now: datetime, actions: list[RetentionAction]) -> None:
+        persistence = self._require_persistence()
         trace_paths = [action.target for action in actions if action.kind == "trace"]
         if trace_paths:
-            self.persistence.supabase.storage.from_(self.persistence.bucket).remove(trace_paths)
+            persistence.supabase.storage.from_(persistence.bucket).remove(trace_paths)
             for path in trace_paths:
-                self.persistence.db.table("pipeline_runs").update({"trace_path": None}).eq(
+                persistence.db.table("pipeline_runs").update({"trace_path": None}).eq(
                     "trace_path", path
                 ).execute()
-        self.persistence.db.table("web_content_cache").delete().lt(
+        persistence.db.table("web_content_cache").delete().lt(
             "expires_at", now.isoformat()
         ).execute()
-        self.persistence.db.table("revoked_auth_tokens").delete().lt(
+        persistence.db.table("revoked_auth_tokens").delete().lt(
             "expires_at", now.isoformat()
         ).execute()
         rate_cutoff = now - timedelta(days=self.policy.rate_limit_days)
-        self.persistence.db.table("api_rate_limits").delete().lt(
+        persistence.db.table("api_rate_limits").delete().lt(
             "updated_at", rate_cutoff.isoformat()
         ).execute()
+
+    def _require_persistence(self) -> PipelinePersistence:
+        if self.persistence is None:
+            raise RuntimeError("Persistencia obrigatoria para a politica de banco e traces")
+        return self.persistence
