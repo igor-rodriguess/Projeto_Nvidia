@@ -100,10 +100,15 @@ def run_batch(
 )
 def resume_batch(
     batch_id: UUID,
+    reprocess_partial: bool = Query(default=False),
     service: BatchProcessingService = Depends(get_batch_service),
 ) -> dict[str, Any]:
     try:
-        return service.queue_batch(batch_id, resume=True)
+        return service.queue_batch(
+            batch_id,
+            resume=True,
+            reprocess_partial=reprocess_partial,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 

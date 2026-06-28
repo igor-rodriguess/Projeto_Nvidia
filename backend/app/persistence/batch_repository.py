@@ -209,6 +209,22 @@ class BatchRepository:
             )
         return len(retryable)
 
+    def requeue_partial_items(self, batch_id: UUID) -> int:
+        partial = self.list_items(batch_id, statuses={"partial"})
+        for item in partial:
+            self._update_item(
+                UUID(item["id"]),
+                {
+                    "status": "pending",
+                    "pipeline_run_id": None,
+                    "last_error": None,
+                    "result_summary": {},
+                    "started_at": None,
+                    "finished_at": None,
+                },
+            )
+        return len(partial)
+
     def start_item(self, item_id: UUID) -> None:
         item = self.get_item(item_id)
         self._update_item(

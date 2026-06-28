@@ -63,3 +63,23 @@ def test_batch_repository_claims_pending_batch_once():
     assert claimed["id"] == str(batch_id)
     assert claimed["worker_id"] == "worker-a"
     assert second_claim is None
+
+
+def test_batch_repository_requeues_partial_for_controlled_reprocessing():
+    repository = BatchRepository(PipelinePersistence(client=FakeSupabase()))
+    batch_id = repository.create_batch("data/curated/base.json", [_startup(1)])
+    item_id = UUID(repository.list_items(batch_id)[0]["id"])
+    repository.start_item(item_id)
+    repository.finish_item(
+        item_id,
+        "partial",
+        pipeline_run_id=uuid4(),
+        result_summary={"classificacao": "AI-enabled"},
+        error="Fontes insuficientes",
+    )
+
+    assert repository.requeue_partial_items(batch_id) == 1
+    item = repository.get_item(item_id)
+    assert item["status"] == "pending"
+    assert item["pipeline_run_id"] is None
+    assert item["result_summary"] == {}

@@ -180,7 +180,12 @@ class BatchProcessingService:
         )
         return final
 
-    def queue_batch(self, batch_id: UUID, resume: bool = False) -> dict[str, Any]:
+    def queue_batch(
+        self,
+        batch_id: UUID,
+        resume: bool = False,
+        reprocess_partial: bool = False,
+    ) -> dict[str, Any]:
         batch = self.repository.get_batch(batch_id)
         if batch["status"] == "running":
             raise ValueError("Lote em execucao nao pode ser reenfileirado")
@@ -188,6 +193,8 @@ class BatchProcessingService:
         self.repository.recover_interrupted_items(batch_id)
         if resume:
             self.repository.requeue_retryable_items(batch_id, options.max_attempts)
+        if reprocess_partial:
+            self.repository.requeue_partial_items(batch_id)
         self.repository.queue_batch(batch_id)
         return self.repository.get_batch(batch_id)
 
