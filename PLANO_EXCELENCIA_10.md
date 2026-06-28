@@ -155,6 +155,7 @@ Atualizado em 27 de junho de 2026:
 - Concluído: lease com heartbeat, tentativas limitadas, DLQ e replay.
 - Concluído: `InceptionFitAgent` conservador, persistência e seção de aderência no briefing.
 - Concluído: CI de pull request com Ruff, mypy, 104 testes, Gitleaks e build Docker.
+- Concluído: JWT Supabase por JWKS, RBAC, denylist de revogação e rate limit atômico.
 - Concluído: cache Firecrawl de sete dias, hash de opções, limites por startup e
   lote, reserva atômica, alerta de 80% e métricas de custo/falha.
 - Pendente externo: rotação das chaves Supabase e Firecrawl pelo proprietário.

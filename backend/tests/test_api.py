@@ -110,6 +110,7 @@ def test_create_batch_queues_for_external_worker(monkeypatch):
     monkeypatch.setenv("BACKEND_API_KEY", "test-api-key")
     service = FakeBatchService()
     app.dependency_overrides[get_batch_service] = lambda: service
+    app.dependency_overrides[get_persistence] = lambda: FakePersistence()
     try:
         with TestClient(app) as client:
             response = client.post("/api/v1/batches", json={"limit": 2}, headers=AUTH)

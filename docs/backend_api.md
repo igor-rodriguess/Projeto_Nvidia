@@ -20,8 +20,9 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 - Swagger: `http://127.0.0.1:8000/docs`
 - OpenAPI: `http://127.0.0.1:8000/openapi.json`
 
-Os endpoints `/api/v1/*` e `/metrics` exigem `X-API-Key`, cujo valor fica apenas em
-`backend/.env` como `BACKEND_API_KEY`. `/health` e `/ready` permanecem públicos.
+Os endpoints `/api/v1/*` e `/metrics` exigem `Authorization: Bearer <token Supabase>`.
+Em desenvolvimento, `X-API-Key` pode ser habilitado temporariamente. `/health` e
+`/ready` permanecem públicos.
 
 Em outro terminal, inicie o worker:
 
@@ -37,7 +38,7 @@ Sem `limit`, todas as startups da versão CURATED mais recente são incluídas:
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/batches \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: $BACKEND_API_KEY" \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
   -d '{"max_attempts": 2}'
 ```
 
@@ -46,7 +47,7 @@ Para validar com duas startups sem consumir a base inteira:
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/batches \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: $BACKEND_API_KEY" \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
   -d '{"limit": 2}'
 ```
 

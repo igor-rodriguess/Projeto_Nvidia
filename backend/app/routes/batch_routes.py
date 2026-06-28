@@ -8,14 +8,14 @@ from pydantic import BaseModel, Field
 
 from app.persistence.persistence_service import PersistenceError
 from app.routes.dependencies import get_batch_service
-from app.routes.auth import require_api_key
+from app.routes.security import enforce_security, require_roles
 from app.services.batch_processing_service import BatchExecutionOptions, BatchProcessingService
 
 
 router = APIRouter(
     prefix="/api/v1/batches",
     tags=["batches"],
-    dependencies=[Depends(require_api_key)],
+    dependencies=[Depends(enforce_security)],
 )
 
 
@@ -28,7 +28,11 @@ class BatchCreateRequest(BaseModel):
     stop_on_error: bool = False
 
 
-@router.post("", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(require_roles("admin", "analyst"))],
+)
 def create_batch(
     request: BatchCreateRequest,
     service: BatchProcessingService = Depends(get_batch_service),
@@ -71,7 +75,11 @@ def get_batch_items(
     return service.repository.list_items(batch_id, statuses=statuses)
 
 
-@router.post("/{batch_id}/run", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/{batch_id}/run",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(require_roles("admin", "analyst"))],
+)
 def run_batch(
     batch_id: UUID,
     service: BatchProcessingService = Depends(get_batch_service),
@@ -85,7 +93,11 @@ def run_batch(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.post("/{batch_id}/resume", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/{batch_id}/resume",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(require_roles("admin", "analyst"))],
+)
 def resume_batch(
     batch_id: UUID,
     service: BatchProcessingService = Depends(get_batch_service),
@@ -96,7 +108,7 @@ def resume_batch(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.post("/{batch_id}/cancel")
+@router.post("/{batch_id}/cancel", dependencies=[Depends(require_roles("admin"))])
 def cancel_batch(
     batch_id: UUID,
     service: BatchProcessingService = Depends(get_batch_service),
@@ -113,7 +125,11 @@ def get_dead_letters(
     return service.repository.list_dead_letters(batch_id)
 
 
-@router.post("/dead-letters/{dead_letter_id}/replay", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/dead-letters/{dead_letter_id}/replay",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(require_roles("admin"))],
+)
 def replay_dead_letter(
     dead_letter_id: UUID,
     service: BatchProcessingService = Depends(get_batch_service),

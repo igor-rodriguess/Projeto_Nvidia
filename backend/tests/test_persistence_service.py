@@ -301,10 +301,12 @@ def test_migration_contains_security_and_storage_requirements():
     )
 
     assert "create schema if not exists nvidia_inception" in sql.lower()
-    assert sql.lower().count("enable row level security") == 17
+    assert sql.lower().count("enable row level security") == 19
     assert "web_content_cache" in sql
     assert "external_api_usage" in sql
     assert "reserve_external_api_usage" in sql
+    assert "consume_api_rate_limit" in sql
+    assert "revoked_auth_tokens" in sql
     assert "to service_role" in sql
     assert "pipeline-traces" in sql
     assert "startups_nome_lower_uidx" in sql

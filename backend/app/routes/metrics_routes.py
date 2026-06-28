@@ -8,11 +8,11 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import PlainTextResponse
 
 from app.persistence.persistence_service import PipelinePersistence
-from app.routes.auth import require_api_key
+from app.routes.security import enforce_security
 from app.routes.dependencies import get_persistence
 
 
-router = APIRouter(tags=["metrics"], dependencies=[Depends(require_api_key)])
+router = APIRouter(tags=["metrics"], dependencies=[Depends(enforce_security)])
 
 
 @router.get("/api/v1/metrics")

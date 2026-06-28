@@ -309,6 +309,21 @@ create table if not exists nvidia_inception.external_api_usage (
   created_at timestamptz not null default now()
 );
 
+create table if not exists nvidia_inception.revoked_auth_tokens (
+  token_id text primary key,
+  expires_at timestamptz not null,
+  revoked_by text not null,
+  reason text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists nvidia_inception.api_rate_limits (
+  rate_key text primary key,
+  window_started_at timestamptz not null,
+  request_count integer not null default 0 check (request_count >= 0),
+  updated_at timestamptz not null default now()
+);
+
 alter table nvidia_inception.web_content_cache
   add column if not exists options_hash text not null default '';
 alter table nvidia_inception.external_api_usage
@@ -416,6 +431,69 @@ revoke all on function nvidia_inception.external_api_metrics()
   from public, anon, authenticated;
 grant execute on function nvidia_inception.external_api_metrics() to service_role;
 
+create or replace function nvidia_inception.consume_api_rate_limit(
+  p_key text,
+  p_limit integer,
+  p_window_seconds integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = nvidia_inception, public
+as $$
+declare
+  now_value timestamptz := now();
+  current_count integer := 0;
+  window_start timestamptz;
+  retry_after integer;
+begin
+  if p_limit < 1 or p_window_seconds < 1 then
+    raise exception 'Limite e janela devem ser positivos';
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('rate:' || p_key, 0));
+  select request_count, window_started_at
+    into current_count, window_start
+    from nvidia_inception.api_rate_limits
+   where rate_key = p_key;
+
+  if window_start is null or window_start + make_interval(secs => p_window_seconds) <= now_value then
+    current_count := 0;
+    window_start := now_value;
+  end if;
+  retry_after := greatest(
+    1,
+    ceiling(extract(epoch from (window_start + make_interval(secs => p_window_seconds) - now_value)))::integer
+  );
+  if current_count >= p_limit then
+    return jsonb_build_object(
+      'allowed', false,
+      'remaining', 0,
+      'retry_after', retry_after
+    );
+  end if;
+
+  current_count := current_count + 1;
+  insert into nvidia_inception.api_rate_limits (
+    rate_key, window_started_at, request_count, updated_at
+  ) values (p_key, window_start, current_count, now_value)
+  on conflict (rate_key) do update set
+    window_started_at = excluded.window_started_at,
+    request_count = excluded.request_count,
+    updated_at = excluded.updated_at;
+
+  return jsonb_build_object(
+    'allowed', true,
+    'remaining', greatest(p_limit - current_count, 0),
+    'retry_after', retry_after
+  );
+end;
+$$;
+
+revoke all on function nvidia_inception.consume_api_rate_limit(text, integer, integer)
+  from public, anon, authenticated;
+grant execute on function nvidia_inception.consume_api_rate_limit(text, integer, integer)
+  to service_role;
+
 create index if not exists pipeline_runs_startup_id_idx
   on nvidia_inception.pipeline_runs(startup_id);
 create index if not exists pipeline_runs_status_idx
@@ -504,6 +582,8 @@ alter table nvidia_inception.batch_items enable row level security;
 alter table nvidia_inception.batch_dead_letters enable row level security;
 alter table nvidia_inception.web_content_cache enable row level security;
 alter table nvidia_inception.external_api_usage enable row level security;
+alter table nvidia_inception.revoked_auth_tokens enable row level security;
+alter table nvidia_inception.api_rate_limits enable row level security;
 
 do $$
 declare
@@ -514,7 +594,7 @@ begin
     'ai_assessments', 'inception_fit_assessments', 'nvidia_recommendations', 'recommendation_citations',
     'recommendation_refinements', 'impact_estimates', 'executive_briefings',
     'batch_runs', 'batch_items', 'batch_dead_letters', 'web_content_cache',
-    'external_api_usage'
+    'external_api_usage', 'revoked_auth_tokens', 'api_rate_limits'
   ] loop
     execute format('drop policy if exists service_role_all on nvidia_inception.%I', table_name);
     execute format(
