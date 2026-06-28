@@ -155,7 +155,7 @@ Atualizado em 27 de junho de 2026:
 - Concluído: lease com heartbeat, tentativas limitadas, DLQ e replay.
 - Concluído: `InceptionFitAgent` conservador, persistência e seção de aderência no briefing.
 - Concluído: CI de pull request com Ruff, mypy, 104 testes, Gitleaks e build Docker.
-- Parcial: cache Firecrawl de sete dias, limite por startup e ledger de custo estão
-  ativos; limite agregado por lote e alerta de 80% ainda precisam ser implementados.
+- Concluído: cache Firecrawl de sete dias, hash de opções, limites por startup e
+  lote, reserva atômica, alerta de 80% e métricas de custo/falha.
 - Pendente externo: rotação das chaves Supabase e Firecrawl pelo proprietário.
 - Pendente humano: revisão da amostra e aprovação do conjunto ouro.

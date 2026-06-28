@@ -134,6 +134,15 @@ class FakeWebCache:
         self.usage.append({"url": url, **payload})
 
 
+class BudgetWebCache(FakeWebCache):
+    def __init__(self, reservation):
+        super().__init__()
+        self.reservation = reservation
+
+    def reserve_request(self, url, **payload):
+        return self.reservation
+
+
 class BrokenWebCache:
     def get(self, url):
         raise RuntimeError("cache indisponivel")
@@ -274,7 +283,9 @@ def test_firecrawl_stores_response_and_reuses_it(monkeypatch):
 
     assert first["titulo_pagina"] == "Caso IA"
     assert second["metadados"]["cache_hit"] is True
-    assert client.stats == {"requests": 1, "cache_hits": 1, "failures": 0, "budget_exceeded": 0}
+    assert client.stats["requests"] == 1
+    assert client.stats["cache_hits"] == 1
+    assert client.stats["failures"] == 0
     assert sum(call[0] == "POST" for call in session.calls) == 1
 
 
@@ -288,6 +299,30 @@ def test_firecrawl_enforces_request_budget(monkeypatch):
         client.scrape("https://example.com/segunda")
     assert client.stats["requests"] == 1
     assert client.stats["budget_exceeded"] == 1
+
+
+def test_firecrawl_enforces_atomic_batch_budget(monkeypatch):
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "firecrawl-test")
+    cache = BudgetWebCache({"allowed": False, "used": 100, "warning": True})
+    client = FirecrawlClient(FakeSession(), cache=cache, delay_seconds=0)
+
+    with pytest.raises(ValueError, match="do lote esgotado"):
+        client.scrape("https://example.com/ia")
+
+    assert client.stats["batch_budget_exceeded"] == 1
+
+
+def test_firecrawl_reports_batch_budget_warning(monkeypatch):
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "firecrawl-test")
+    cache = BudgetWebCache(
+        {"allowed": True, "reservation_id": "reservation-1", "used": 80, "warning": True}
+    )
+    client = FirecrawlClient(FakeSession(), cache=cache, delay_seconds=0)
+
+    client.scrape("https://example.com/ia")
+
+    assert client.stats["batch_budget_warning"] == 1
+    assert cache.usage[0]["reservation_id"] == "reservation-1"
 
 
 def test_firecrawl_continues_when_cache_is_unavailable(monkeypatch):

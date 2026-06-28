@@ -311,7 +311,17 @@ class FirecrawlClient:
             if estimated_cost_per_request_usd is not None
             else float(os.getenv("FIRECRAWL_ESTIMATED_COST_PER_REQUEST_USD", "0"))
         )
-        self.stats = {"requests": 0, "cache_hits": 0, "failures": 0, "budget_exceeded": 0}
+        self.max_requests_per_batch = int(
+            os.getenv("FIRECRAWL_MAX_REQUESTS_PER_BATCH", "100")
+        )
+        self.stats = {
+            "requests": 0,
+            "cache_hits": 0,
+            "failures": 0,
+            "budget_exceeded": 0,
+            "batch_budget_exceeded": 0,
+            "batch_budget_warning": 0,
+        }
 
     def scrape(self, url: str) -> dict[str, Any]:
         cached = self._cache_get(url)
@@ -328,6 +338,22 @@ class FirecrawlClient:
             raise ValueError(
                 f"Orcamento Firecrawl esgotado: maximo de {self.max_requests} chamadas por startup"
             )
+
+        reservation = self._reserve_request(url)
+        if not reservation.get("allowed", True):
+            self.stats["batch_budget_exceeded"] += 1
+            raise ValueError(
+                "Orcamento Firecrawl do lote esgotado: "
+                f"maximo de {self.max_requests_per_batch} chamadas"
+            )
+        if reservation.get("warning"):
+            self.stats["batch_budget_warning"] = 1
+            LOGGER.warning(
+                "Orcamento Firecrawl do lote atingiu %s/%s chamadas",
+                reservation.get("used"),
+                self.max_requests_per_batch,
+            )
+        reservation_id = reservation.get("reservation_id")
 
         self._wait()
         self.stats["requests"] += 1
@@ -350,6 +376,7 @@ class FirecrawlClient:
                 cache_hit=False,
                 success=False,
                 estimated_cost_usd=self.estimated_cost_per_request_usd,
+                reservation_id=reservation_id,
             )
             raise
         payload = response.json()
@@ -369,6 +396,7 @@ class FirecrawlClient:
             cache_hit=False,
             success=True,
             estimated_cost_usd=self.estimated_cost_per_request_usd,
+            reservation_id=reservation_id,
         )
         return result
 
@@ -396,6 +424,7 @@ class FirecrawlClient:
         cache_hit: bool,
         success: bool,
         estimated_cost_usd: float = 0.0,
+        reservation_id: str | None = None,
     ) -> None:
         if self.cache is None:
             return
@@ -405,9 +434,24 @@ class FirecrawlClient:
                 cache_hit=cache_hit,
                 success=success,
                 estimated_cost_usd=estimated_cost_usd,
+                reservation_id=reservation_id,
             )
         except Exception as exc:
             LOGGER.warning("Falha ao registrar uso Firecrawl para %s: %s", url, exc)
+
+    def _reserve_request(self, url: str) -> dict[str, Any]:
+        reserve = getattr(self.cache, "reserve_request", None)
+        if not callable(reserve):
+            return {"allowed": True}
+        try:
+            return reserve(
+                url,
+                limit=self.max_requests_per_batch,
+                estimated_cost_usd=self.estimated_cost_per_request_usd,
+            )
+        except Exception as exc:
+            LOGGER.warning("Falha ao reservar orcamento Firecrawl para %s: %s", url, exc)
+            return {"allowed": True}
 
     def _wait(self) -> None:
         if self.delay_seconds <= 0:

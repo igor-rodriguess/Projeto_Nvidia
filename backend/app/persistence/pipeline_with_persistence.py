@@ -8,7 +8,7 @@ from uuid import UUID
 from langchain_core.runnables import Runnable, RunnableLambda
 
 from app.persistence.persistence_service import PersistenceError, PipelinePersistence
-from app.persistence.web_cache import SupabaseWebContentCache
+from app.persistence.web_cache import SupabaseWebContentCache, set_web_pipeline_run_id
 from app.services.enterprise_pipeline import EnterprisePipeline
 
 
@@ -42,6 +42,7 @@ class PipelinePersistenceHook:
             "startup_id": str(startup_id),
             "run_id": str(run_id),
         }
+        set_web_pipeline_run_id(str(run_id))
 
     def stage_completed(
         self,

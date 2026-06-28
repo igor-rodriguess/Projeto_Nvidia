@@ -287,6 +287,7 @@ create table if not exists nvidia_inception.web_content_cache (
   cache_key text primary key,
   url text not null check (url ~* '^https?://'),
   extractor text not null,
+  options_hash text not null default '',
   response_json jsonb not null,
   expires_at timestamptz not null,
   created_at timestamptz not null default now(),
@@ -298,12 +299,122 @@ create table if not exists nvidia_inception.external_api_usage (
   provider text not null,
   operation text not null,
   source_domain text,
+  batch_run_id uuid references nvidia_inception.batch_runs(id) on delete set null,
+  pipeline_run_id uuid references nvidia_inception.pipeline_runs(id) on delete set null,
+  startup_name text,
   units integer not null default 1 check (units >= 0),
   estimated_cost_usd double precision not null default 0 check (estimated_cost_usd >= 0),
   cache_hit boolean not null default false,
   success boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+alter table nvidia_inception.web_content_cache
+  add column if not exists options_hash text not null default '';
+alter table nvidia_inception.external_api_usage
+  add column if not exists batch_run_id uuid references nvidia_inception.batch_runs(id) on delete set null;
+alter table nvidia_inception.external_api_usage
+  add column if not exists pipeline_run_id uuid references nvidia_inception.pipeline_runs(id) on delete set null;
+alter table nvidia_inception.external_api_usage
+  add column if not exists startup_name text;
+
+create or replace function nvidia_inception.reserve_external_api_usage(
+  p_provider text,
+  p_operation text,
+  p_url text,
+  p_batch_run_id uuid,
+  p_pipeline_run_id uuid,
+  p_startup_name text,
+  p_limit integer,
+  p_estimated_cost_usd double precision
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = nvidia_inception, public
+as $$
+declare
+  used_units integer := 0;
+  reservation_id uuid;
+  used_after integer;
+begin
+  if p_batch_run_id is not null then
+    perform pg_advisory_xact_lock(hashtextextended(p_provider || ':' || p_batch_run_id::text, 0));
+    select coalesce(sum(units), 0)::integer
+      into used_units
+      from nvidia_inception.external_api_usage
+     where provider = p_provider
+       and batch_run_id = p_batch_run_id;
+    if used_units >= p_limit then
+      return jsonb_build_object(
+        'allowed', false,
+        'used', used_units,
+        'limit', p_limit,
+        'warning', true
+      );
+    end if;
+  end if;
+
+  insert into nvidia_inception.external_api_usage (
+    provider, operation, source_domain, batch_run_id, pipeline_run_id,
+    startup_name, units, estimated_cost_usd, cache_hit, success
+  ) values (
+    p_provider,
+    p_operation,
+    substring(p_url from '^https?://([^/]+)'),
+    p_batch_run_id,
+    p_pipeline_run_id,
+    p_startup_name,
+    1,
+    greatest(coalesce(p_estimated_cost_usd, 0), 0),
+    false,
+    false
+  ) returning id into reservation_id;
+
+  used_after := used_units + 1;
+  return jsonb_build_object(
+    'allowed', true,
+    'reservation_id', reservation_id,
+    'used', used_after,
+    'limit', p_limit,
+    'warning', p_batch_run_id is not null and used_after >= ceiling(p_limit * 0.8)
+  );
+end;
+$$;
+
+revoke all on function nvidia_inception.reserve_external_api_usage(
+  text, text, text, uuid, uuid, text, integer, double precision
+) from public, anon, authenticated;
+grant execute on function nvidia_inception.reserve_external_api_usage(
+  text, text, text, uuid, uuid, text, integer, double precision
+) to service_role;
+
+create or replace function nvidia_inception.external_api_metrics()
+returns table (
+  provider text,
+  requests bigint,
+  cache_hits bigint,
+  failures bigint,
+  estimated_cost_usd double precision
+)
+language sql
+stable
+security definer
+set search_path = nvidia_inception, public
+as $$
+  select
+    usage.provider,
+    coalesce(sum(usage.units), 0)::bigint as requests,
+    count(*) filter (where usage.cache_hit)::bigint as cache_hits,
+    count(*) filter (where not usage.success and usage.units > 0)::bigint as failures,
+    coalesce(sum(usage.estimated_cost_usd), 0)::double precision as estimated_cost_usd
+  from nvidia_inception.external_api_usage usage
+  group by usage.provider;
+$$;
+
+revoke all on function nvidia_inception.external_api_metrics()
+  from public, anon, authenticated;
+grant execute on function nvidia_inception.external_api_metrics() to service_role;
 
 create index if not exists pipeline_runs_startup_id_idx
   on nvidia_inception.pipeline_runs(startup_id);
@@ -348,6 +459,8 @@ create index if not exists web_content_cache_expires_idx
   on nvidia_inception.web_content_cache(expires_at);
 create index if not exists external_api_usage_provider_created_idx
   on nvidia_inception.external_api_usage(provider, created_at);
+create index if not exists external_api_usage_batch_provider_idx
+  on nvidia_inception.external_api_usage(batch_run_id, provider);
 
 drop trigger if exists startups_set_updated_at on nvidia_inception.startups;
 create trigger startups_set_updated_at

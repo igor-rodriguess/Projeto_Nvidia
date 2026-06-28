@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections import Counter
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import PlainTextResponse
@@ -33,14 +35,66 @@ def metrics_prometheus(
     return PlainTextResponse("\n".join(lines) + "\n")
 
 
-def _collect_metrics(persistence: PipelinePersistence) -> dict[str, dict[str, int]]:
-    return {
+def _collect_metrics(persistence: PipelinePersistence) -> dict[str, dict[str, int | float]]:
+    metrics: dict[str, dict[str, int | float]] = {
         "pipeline_runs": _status_counts(persistence, "pipeline_runs"),
         "batch_runs": _status_counts(persistence, "batch_runs"),
         "batch_items": _status_counts(persistence, "batch_items"),
     }
+    metrics.update(_worker_metrics(persistence))
+    metrics.update(_external_api_metrics(persistence))
+    return metrics
 
 
 def _status_counts(persistence: PipelinePersistence, table: str) -> dict[str, int]:
     response = persistence.db.table(table).select("status").execute()
     return dict(Counter(row["status"] for row in (response.data or [])))
+
+
+def _worker_metrics(persistence: PipelinePersistence) -> dict[str, dict[str, int]]:
+    response = (
+        persistence.db.table("batch_runs")
+        .select("status,lease_expires_at")
+        .eq("status", "running")
+        .execute()
+    )
+    active = list(response.data or [])
+    now = datetime.now(UTC)
+    stale = sum(
+        1
+        for row in active
+        if _parse_datetime(row.get("lease_expires_at")) is None
+        or _parse_datetime(row.get("lease_expires_at")) <= now
+    )
+    return {"workers": {"active_leases": len(active), "stale_leases": stale}}
+
+
+def _external_api_metrics(
+    persistence: PipelinePersistence,
+) -> dict[str, dict[str, int | float]]:
+    rpc = getattr(persistence.db, "rpc", None)
+    if not callable(rpc):
+        return {}
+    response = rpc("external_api_metrics", {}).execute()
+    requests: dict[str, int | float] = {}
+    cache_hits: dict[str, int | float] = {}
+    failures: dict[str, int | float] = {}
+    costs: dict[str, int | float] = {}
+    for row in response.data or []:
+        provider = str(row["provider"])
+        requests[provider] = int(row.get("requests") or 0)
+        cache_hits[provider] = int(row.get("cache_hits") or 0)
+        failures[provider] = int(row.get("failures") or 0)
+        costs[provider] = round(float(row.get("estimated_cost_usd") or 0), 6)
+    return {
+        "external_api_requests": requests,
+        "external_api_cache_hits": cache_hits,
+        "external_api_failures": failures,
+        "external_api_estimated_cost_usd": costs,
+    }
+
+
+def _parse_datetime(value: Any) -> datetime | None:
+    if not value:
+        return None
+    return datetime.fromisoformat(str(value).replace("Z", "+00:00"))

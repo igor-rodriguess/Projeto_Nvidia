@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from app.core.observability import LOGGER
 from app.persistence.batch_repository import BatchRepository
 from app.persistence.pipeline_with_persistence import run_pipeline_with_persistence
+from app.persistence.web_cache import web_usage_context
 
 
 PipelineRunner = Callable[[dict[str, Any]], dict[str, Any]]
@@ -160,7 +161,8 @@ class BatchProcessingService:
                     break
                 if worker_id:
                     self.repository.heartbeat(batch_id, worker_id)
-                failed = not self._process_item(item)
+                with web_usage_context(str(batch_id), item["startup_name"]):
+                    failed = not self._process_item(item)
                 self.repository.finalize_batch(batch_id)
                 if worker_id:
                     self.repository.heartbeat(batch_id, worker_id)

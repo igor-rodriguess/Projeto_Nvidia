@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from app.persistence.models import AIAssessment
 from app.persistence.persistence_service import PipelinePersistence
 from app.persistence.web_cache import SupabaseWebContentCache
+from app.persistence.web_cache import web_usage_context
 
 
 class FakeQuery:
@@ -280,13 +281,16 @@ def test_web_content_cache_persists_content_and_usage():
 
     assert cache.get(url) is None
     cache.set(url, content)
-    cache.record_usage(url, cache_hit=False, success=True, estimated_cost_usd=0.01)
+    with web_usage_context("00000000-0000-0000-0000-000000000001", "Clara"):
+        cache.record_usage(url, cache_hit=False, success=True, estimated_cost_usd=0.01)
 
     assert cache.get(url) == content
     usage = client.database.rows["external_api_usage"][0]
     assert usage["provider"] == "firecrawl"
     assert usage["source_domain"] == "example.com"
     assert usage["estimated_cost_usd"] == 0.01
+    assert usage["batch_run_id"] == "00000000-0000-0000-0000-000000000001"
+    assert usage["startup_name"] == "Clara"
 
 
 def test_migration_contains_security_and_storage_requirements():
@@ -300,6 +304,7 @@ def test_migration_contains_security_and_storage_requirements():
     assert sql.lower().count("enable row level security") == 17
     assert "web_content_cache" in sql
     assert "external_api_usage" in sql
+    assert "reserve_external_api_usage" in sql
     assert "to service_role" in sql
     assert "pipeline-traces" in sql
     assert "startups_nome_lower_uidx" in sql

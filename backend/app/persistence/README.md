@@ -62,6 +62,7 @@ SUPABASE_URL=https://seu-projeto.supabase.co
 SUPABASE_SECRET_KEY=sb_secret_sua_chave_secreta
 SUPABASE_TRACE_BUCKET=pipeline-traces
 FIRECRAWL_MAX_REQUESTS_PER_STARTUP=10
+FIRECRAWL_MAX_REQUESTS_PER_BATCH=100
 FIRECRAWL_ESTIMATED_COST_PER_REQUEST_USD=0
 ```
 
@@ -80,9 +81,10 @@ Storage. Uma falha de banco é anexada ao array `errors`, mas scraping, validaç
 classificação e RAG continuam em modo degradado.
 
 As extrações Firecrawl bem-sucedidas são reutilizadas por sete dias. A falha do
-cache ou do ledger não interrompe a coleta, e o limite por startup impede consumo
-externo ilimitado. Configure o custo unitário apenas para observabilidade; ele não
-é usado para cobrança.
+cache ou do ledger não interrompe a coleta. Os limites por startup e por lote impedem
+consumo externo ilimitado; a reserva agregada no PostgreSQL é atômica entre workers
+e sinaliza quando 80% do teto foi atingido. Configure o custo unitário apenas para
+observabilidade; ele não é usado para cobrança.
 
 ## Usar em código
 

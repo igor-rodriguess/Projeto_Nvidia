@@ -55,6 +55,10 @@ python scripts/run_enterprise_pipeline.py "Clara Pagamentos" "https://clara.com.
 O cache evita repetir chamadas para o mesmo payload. Para invalidar manualmente uma
 execução, remova apenas os arquivos correspondentes em `backend/data/cache/pipeline`.
 
+O endpoint autenticado `/api/v1/metrics` inclui leases ativos/vencidos e, por
+provedor externo, requisições, cache hits, falhas e custo estimado. O Firecrawl usa
+reserva atômica no Supabase, teto por lote e alerta a partir de 80%.
+
 ## Testar
 
 ```bash
