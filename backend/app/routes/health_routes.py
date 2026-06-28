@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import requests
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response, status
 
 from app.persistence.persistence_service import PipelinePersistence
 from app.rag.config import RAGConfig
@@ -19,6 +19,7 @@ def health() -> dict[str, str]:
 
 @router.get("/ready")
 def ready(
+    response: Response,
     persistence: PipelinePersistence = Depends(get_persistence),
 ) -> dict[str, object]:
     checks: dict[str, bool] = {"supabase": False, "qdrant": False, "searxng": False}
@@ -36,4 +37,7 @@ def ready(
         checks["searxng"] = requests.get(searxng_url, timeout=3).ok
     except requests.RequestException:
         pass
-    return {"status": "ready" if all(checks.values()) else "degraded", "checks": checks}
+    is_ready = all(checks.values())
+    if not is_ready:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return {"status": "ready" if is_ready else "degraded", "checks": checks}

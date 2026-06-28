@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import UTC, datetime
+import os
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -43,6 +44,7 @@ def _collect_metrics(persistence: PipelinePersistence) -> dict[str, dict[str, in
     }
     metrics.update(_worker_metrics(persistence))
     metrics.update(_external_api_metrics(persistence))
+    metrics["alerts"] = _derive_alerts(metrics)
     return metrics
 
 
@@ -98,3 +100,26 @@ def _parse_datetime(value: Any) -> datetime | None:
     if not value:
         return None
     return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+
+
+def _derive_alerts(
+    metrics: dict[str, dict[str, int | float]],
+) -> dict[str, int]:
+    workers = metrics.get("workers", {})
+    batch_items = metrics.get("batch_items", {})
+    requests = metrics.get("external_api_requests", {})
+    failures = metrics.get("external_api_failures", {})
+    pending = int(batch_items.get("pending", 0))
+    backlog_threshold = int(os.getenv("BACKLOG_ALERT_THRESHOLD", "20"))
+    firecrawl_requests = int(requests.get("firecrawl", 0))
+    firecrawl_failures = int(failures.get("firecrawl", 0))
+    return {
+        "worker_stale": int(workers.get("stale_leases", 0) > 0),
+        "worker_missing_with_backlog": int(
+            pending > 0 and workers.get("active_leases", 0) == 0
+        ),
+        "backlog_high": int(pending >= backlog_threshold),
+        "firecrawl_failure_ratio_high": int(
+            firecrawl_requests >= 5 and firecrawl_failures / firecrawl_requests >= 0.5
+        ),
+    }
