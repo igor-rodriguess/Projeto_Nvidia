@@ -62,10 +62,11 @@ class SupabaseWebContentCache:
         success: bool,
         estimated_cost_usd: float = 0.0,
         reservation_id: str | None = None,
+        operation: str = "scrape",
     ) -> None:
         payload = {
             "provider": "firecrawl",
-            "operation": "scrape",
+            "operation": operation,
             "source_domain": urlparse(url).netloc.lower() or None,
             "batch_run_id": _batch_run_id.get(),
             "pipeline_run_id": _pipeline_run_id.get(),
@@ -87,12 +88,13 @@ class SupabaseWebContentCache:
         url: str,
         limit: int,
         estimated_cost_usd: float = 0.0,
+        operation: str = "scrape",
     ) -> dict[str, Any]:
         response = self.db.rpc(
             "reserve_external_api_usage",
             {
                 "p_provider": "firecrawl",
-                "p_operation": "scrape",
+                "p_operation": operation,
                 "p_url": url,
                 "p_batch_run_id": _batch_run_id.get(),
                 "p_pipeline_run_id": _pipeline_run_id.get(),

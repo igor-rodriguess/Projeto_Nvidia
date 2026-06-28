@@ -3,7 +3,12 @@ import json
 import pytest
 import requests
 
-from app.agents.scraper_agent import FirecrawlClient, executar_scraper_agent, salvar_resultado_scraper
+from app.agents.scraper_agent import (
+    FirecrawlClient,
+    FirecrawlSearchClient,
+    executar_scraper_agent,
+    salvar_resultado_scraper,
+)
 
 
 class FakeResponse:
@@ -154,6 +159,23 @@ class BrokenWebCache:
         raise RuntimeError("ledger indisponivel")
 
 
+class PaymentRequiredSession:
+    def __init__(self):
+        self.calls = 0
+
+    def post(self, *args, **kwargs):
+        self.calls += 1
+        response = FakeResponse(status_code=402)
+
+        def raise_with_response():
+            error = requests.HTTPError("HTTP 402")
+            error.response = response
+            raise error
+
+        response.raise_for_status = raise_with_response
+        return response
+
+
 def test_scraper_agent_uses_searxng_and_firecrawl_for_web_search(monkeypatch):
     monkeypatch.setenv("SEARCH_PROVIDER", "searxng")
     monkeypatch.setenv("FIRECRAWL_API_KEY", "firecrawl-test")
@@ -204,6 +226,24 @@ def test_scraper_agent_uses_firecrawl_search_when_selected(monkeypatch):
 
     assert resultado["status"] == "completo"
     assert resultado["resultados_buscas"][0]["provedor_busca"] == "firecrawl"
+
+
+def test_firecrawl_search_opens_circuit_after_payment_error(monkeypatch):
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "firecrawl-test")
+    session = PaymentRequiredSession()
+    ledger = BudgetWebCache(
+        {"allowed": True, "reservation_id": "search-reservation", "warning": False}
+    )
+    client = FirecrawlSearchClient(session, delay_seconds=0, usage_ledger=ledger)
+
+    with pytest.raises(requests.HTTPError):
+        client.search("startup IA", 5)
+    with pytest.raises(ValueError, match="desativado"):
+        client.search("outra consulta", 5)
+
+    assert session.calls == 1
+    assert ledger.usage[0]["operation"] == "search"
+    assert ledger.usage[0]["success"] is False
 
 
 def test_scraper_agent_converts_search_planner_plan_to_search_tasks(monkeypatch):

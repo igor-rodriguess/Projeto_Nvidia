@@ -6,6 +6,7 @@ import os
 import re
 import time
 from copy import deepcopy
+import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -175,6 +176,7 @@ class FirecrawlSearchClient:
         api_key: str | None = None,
         delay_seconds: float = 2.0,
         timeout: int = 30,
+        usage_ledger: Any | None = None,
     ) -> None:
         self.session = session
         self.api_key = api_key or os.getenv("FIRECRAWL_API_KEY")
@@ -182,33 +184,56 @@ class FirecrawlSearchClient:
         self.timeout = timeout
         self._last_request_at = 0.0
         self.provider_name = "firecrawl"
+        self.usage_ledger = usage_ledger
+        self.disabled = False
+        self.max_requests_per_batch = int(os.getenv("FIRECRAWL_MAX_REQUESTS_PER_BATCH", "100"))
+        self.estimated_cost_per_request_usd = float(
+            os.getenv("FIRECRAWL_ESTIMATED_COST_PER_REQUEST_USD", "0")
+        )
 
     def search(self, query: str, count: int) -> list[dict[str, Any]]:
+        if self.disabled:
+            raise ValueError("Firecrawl Search desativado apos erro permanente")
         if not self.api_key:
             raise ValueError("FIRECRAWL_API_KEY não configurada")
 
+        reservation = self._reserve(query)
+        if not reservation.get("allowed", True):
+            raise ValueError("Orcamento Firecrawl do lote esgotado")
+        reservation_id = reservation.get("reservation_id")
+
         self._wait()
-        response = self.session.post(
-            FIRECRAWL_SEARCH_URL,
-            json={
-                "query": query,
-                "sources": ["web"],
-                "categories": [],
-                "limit": count,
-                "scrapeOptions": {
-                    "onlyMainContent": True,
-                    "maxAge": 172800000,
-                    "formats": [],
+        try:
+            response = self.session.post(
+                FIRECRAWL_SEARCH_URL,
+                json={
+                    "query": query,
+                    "sources": ["web"],
+                    "categories": [],
+                    "limit": count,
+                    "scrapeOptions": {
+                        "onlyMainContent": True,
+                        "maxAge": 172800000,
+                        "formats": [],
+                    },
                 },
-            },
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-                "User-Agent": USER_AGENT,
-            },
-            timeout=self.timeout,
-        )
-        response.raise_for_status()
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                    "User-Agent": USER_AGENT,
+                },
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            if getattr(exc.response, "status_code", None) in {401, 402, 403}:
+                self.disabled = True
+            self._record(query, False, reservation_id)
+            raise
+        except Exception:
+            self._record(query, False, reservation_id)
+            raise
+        self._record(query, True, reservation_id)
         payload = response.json()
         data = payload.get("data") or {}
         if isinstance(data, dict):
@@ -231,6 +256,34 @@ class FirecrawlSearchClient:
 
         return [item for item in results if item["titulo"] and item["url"]]
 
+    def _usage_url(self, query: str) -> str:
+        query_hash = hashlib.sha256(query.encode("utf-8")).hexdigest()
+        return f"https://api.firecrawl.dev/v2/search/{query_hash}"
+
+    def _reserve(self, query: str) -> dict[str, Any]:
+        reserve = getattr(self.usage_ledger, "reserve_request", None)
+        if not callable(reserve):
+            return {"allowed": True}
+        return reserve(
+            self._usage_url(query),
+            limit=self.max_requests_per_batch,
+            estimated_cost_usd=self.estimated_cost_per_request_usd,
+            operation="search",
+        )
+
+    def _record(self, query: str, success: bool, reservation_id: str | None) -> None:
+        record = getattr(self.usage_ledger, "record_usage", None)
+        if not callable(record):
+            return
+        record(
+            self._usage_url(query),
+            cache_hit=False,
+            success=success,
+            estimated_cost_usd=self.estimated_cost_per_request_usd,
+            reservation_id=reservation_id,
+            operation="search",
+        )
+
     def _wait(self) -> None:
         if self.delay_seconds <= 0:
             return
@@ -247,9 +300,10 @@ class SearchProviderRouter:
         provider: str | None = None,
         delay_seconds: float = 1.0,
         timeout: int = 10,
+        usage_ledger: Any | None = None,
     ) -> None:
         self.provider = (provider or os.getenv("SEARCH_PROVIDER") or "searxng").lower()
-        self.clients = self._build_clients(session, delay_seconds, timeout)
+        self.clients = self._build_clients(session, delay_seconds, timeout, usage_ledger)
 
     def search(self, query: str, count: int) -> list[dict[str, Any]]:
         errors = []
@@ -269,10 +323,16 @@ class SearchProviderRouter:
         session: requests.Session,
         delay_seconds: float,
         timeout: int,
+        usage_ledger: Any | None,
     ) -> list[Any]:
         searxng = SearXNGSearchClient(session, delay_seconds=delay_seconds, timeout=timeout)
         ddgs = DDGSSearchClient(delay_seconds=delay_seconds)
-        firecrawl = FirecrawlSearchClient(session, delay_seconds=delay_seconds, timeout=timeout)
+        firecrawl = FirecrawlSearchClient(
+            session,
+            delay_seconds=delay_seconds,
+            timeout=timeout,
+            usage_ledger=usage_ledger,
+        )
 
         if self.provider == "ddgs":
             return [ddgs, searxng, firecrawl]
@@ -515,6 +575,7 @@ class ScraperAgent:
             self.session,
             delay_seconds=search_delay_seconds,
             timeout=timeout,
+            usage_ledger=web_cache,
         )
         self.firecrawl = firecrawl_client or FirecrawlClient(
             self.session,
