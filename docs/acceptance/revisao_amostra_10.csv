@@ -1,0 +1,11 @@
+﻿sample_seed,batch_id,batch_item_id,pipeline_run_id,startup_name,pipeline_status,classification,maturity_level,impact_index,fit_score,evidence_count,warning_count,source_error_count,critical_error_count,reviewer,classification_agreement,evidence_agreement,recommendation_applicable,briefing_utility_1_5,review_notes
+20260627,7cbf2fb4-a197-413c-bd7e-c23be2803e43,61893bfa-1ceb-45e8-977e-256939e8e3fc,7605ebc3-1038-44e4-9a70-41b93201a8d6,EasyTelling,completed,AI-enabled,3,81,0.8,58,23,23,0,,,,,,
+20260627,7cbf2fb4-a197-413c-bd7e-c23be2803e43,45e94922-3fe2-4f47-b7d7-07e4fe1e5178,f63e3c25-f20c-4ea1-97ed-12777c5336a9,Kinzbio,partial,AI-enabled,2,,,50,19,19,2,,,,,,
+20260627,7cbf2fb4-a197-413c-bd7e-c23be2803e43,48861e0c-4faa-4931-9e11-1331a264b16c,3a4c32cf-917b-4b0b-89f0-060a95699206,DeltaAI,completed,AI-native,5,89,0.8,115,22,22,0,,,,,,
+20260627,7cbf2fb4-a197-413c-bd7e-c23be2803e43,9dab21a0-4d8a-470f-ac3c-57a2a39ff5d2,1b808499-e9d4-400c-92ca-52b216b2a23e,AutoU,partial,AI-native,4,,,129,0,0,18,,,,,,
+20260627,7cbf2fb4-a197-413c-bd7e-c23be2803e43,dfecc4e5-ffa0-4c1d-8e5b-1a54fc3d07bf,a7616c04-641d-46e3-9090-f74e3f4f4293,Carteiro Amigo,completed,Non-AI,,,,48,17,17,0,,,,,,
+20260627,7cbf2fb4-a197-413c-bd7e-c23be2803e43,0e5f6160-33d7-4eb5-986c-d1fba023d3c9,17246815-7b3d-4c00-8647-7c8c9cda11d4,Anzi Finance,partial,Non-AI,,,,42,0,0,21,,,,,,
+20260627,7cbf2fb4-a197-413c-bd7e-c23be2803e43,95e84463-6161-41b0-9ef8-f6756e58811b,098deeb0-2c96-45a9-9574-f076b808fa5c,ESGreen,completed,AI-enabled,3,77,0.72,116,19,19,0,,,,,,
+20260627,7cbf2fb4-a197-413c-bd7e-c23be2803e43,df59366a-bbf1-48ca-9a80-127fa626bfe8,c353e646-fd46-4ea9-b636-b4f468fae254,AICube,partial,AI-enabled,2,76,0.79,112,0,0,21,,,,,,
+20260627,7cbf2fb4-a197-413c-bd7e-c23be2803e43,4a015e8a-700d-4ab3-a550-33de8407c577,7fca2f47-d9f6-4d10-87b5-e5ed8ec10799,Data Guide,completed,AI-native,5,90,0.82,81,13,13,0,,,,,,
+20260627,7cbf2fb4-a197-413c-bd7e-c23be2803e43,2c1a9e99-e96b-4aeb-9088-3493ae3eb93e,e19eb2cd-860b-4b2b-b814-0b68187e6bd9,Company Hero,partial,AI-native,4,,,85,18,18,2,,,,,,

@@ -19,3 +19,10 @@ Um revisor deve preencher:
 A Onda 1 exige pelo menos 90% de concordância nos três critérios binários. O arquivo
 preenchido deve permanecer versionado sem dados pessoais do revisor além do nome ou
 identificador profissional autorizado.
+
+Durante a execução, `--allow-incomplete` pode gerar uma amostra preliminar. Depois
+que o lote ficar terminal, regenere sem essa flag e publique também o relatório:
+
+```bash
+python scripts/generate_batch_acceptance_report.py <batch_id>
+```

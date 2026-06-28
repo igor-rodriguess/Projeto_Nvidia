@@ -1,10 +1,131 @@
 {
   "version": "1.0.0-draft",
   "status": "draft",
-  "created_at": "2026-06-27T00:00:00-03:00",
-  "description": "Estrutura do conjunto ouro. Os casos serao preenchidos e aprovados por revisores humanos apos o lote de 50 startups.",
+  "created_at": "2026-06-28T01:19:22.549475Z",
+  "description": "Amostra independente para rotulagem e aprovacao humana.",
   "source_batch_id": "7cbf2fb4-a197-413c-bd7e-c23be2803e43",
   "documents_version": null,
-  "code_commit": null,
-  "cases": []
+  "code_commit": "8542615f6016a824705b3cc280f0dd808914922d",
+  "cases": [
+    {
+      "case_id": "01-easytelling",
+      "startup": "EasyTelling",
+      "pipeline_run_id": "7605ebc3-1038-44e4-9a70-41b93201a8d6",
+      "expected_classification": null,
+      "expected_maturity": null,
+      "accepted_evidence_urls": [],
+      "expected_nvidia_technologies": [],
+      "briefing_utility_1_5": null,
+      "reviewed_by": null,
+      "review_notes": ""
+    },
+    {
+      "case_id": "02-kinzbio",
+      "startup": "Kinzbio",
+      "pipeline_run_id": "f63e3c25-f20c-4ea1-97ed-12777c5336a9",
+      "expected_classification": null,
+      "expected_maturity": null,
+      "accepted_evidence_urls": [],
+      "expected_nvidia_technologies": [],
+      "briefing_utility_1_5": null,
+      "reviewed_by": null,
+      "review_notes": ""
+    },
+    {
+      "case_id": "03-deltaai",
+      "startup": "DeltaAI",
+      "pipeline_run_id": "3a4c32cf-917b-4b0b-89f0-060a95699206",
+      "expected_classification": null,
+      "expected_maturity": null,
+      "accepted_evidence_urls": [],
+      "expected_nvidia_technologies": [],
+      "briefing_utility_1_5": null,
+      "reviewed_by": null,
+      "review_notes": ""
+    },
+    {
+      "case_id": "04-autou",
+      "startup": "AutoU",
+      "pipeline_run_id": "1b808499-e9d4-400c-92ca-52b216b2a23e",
+      "expected_classification": null,
+      "expected_maturity": null,
+      "accepted_evidence_urls": [],
+      "expected_nvidia_technologies": [],
+      "briefing_utility_1_5": null,
+      "reviewed_by": null,
+      "review_notes": ""
+    },
+    {
+      "case_id": "05-carteiro-amigo",
+      "startup": "Carteiro Amigo",
+      "pipeline_run_id": "a7616c04-641d-46e3-9090-f74e3f4f4293",
+      "expected_classification": null,
+      "expected_maturity": null,
+      "accepted_evidence_urls": [],
+      "expected_nvidia_technologies": [],
+      "briefing_utility_1_5": null,
+      "reviewed_by": null,
+      "review_notes": ""
+    },
+    {
+      "case_id": "06-anzi-finance",
+      "startup": "Anzi Finance",
+      "pipeline_run_id": "17246815-7b3d-4c00-8647-7c8c9cda11d4",
+      "expected_classification": null,
+      "expected_maturity": null,
+      "accepted_evidence_urls": [],
+      "expected_nvidia_technologies": [],
+      "briefing_utility_1_5": null,
+      "reviewed_by": null,
+      "review_notes": ""
+    },
+    {
+      "case_id": "07-esgreen",
+      "startup": "ESGreen",
+      "pipeline_run_id": "098deeb0-2c96-45a9-9574-f076b808fa5c",
+      "expected_classification": null,
+      "expected_maturity": null,
+      "accepted_evidence_urls": [],
+      "expected_nvidia_technologies": [],
+      "briefing_utility_1_5": null,
+      "reviewed_by": null,
+      "review_notes": ""
+    },
+    {
+      "case_id": "08-aicube",
+      "startup": "AICube",
+      "pipeline_run_id": "c353e646-fd46-4ea9-b636-b4f468fae254",
+      "expected_classification": null,
+      "expected_maturity": null,
+      "accepted_evidence_urls": [],
+      "expected_nvidia_technologies": [],
+      "briefing_utility_1_5": null,
+      "reviewed_by": null,
+      "review_notes": ""
+    },
+    {
+      "case_id": "09-data-guide",
+      "startup": "Data Guide",
+      "pipeline_run_id": "7fca2f47-d9f6-4d10-87b5-e5ed8ec10799",
+      "expected_classification": null,
+      "expected_maturity": null,
+      "accepted_evidence_urls": [],
+      "expected_nvidia_technologies": [],
+      "briefing_utility_1_5": null,
+      "reviewed_by": null,
+      "review_notes": ""
+    },
+    {
+      "case_id": "10-company-hero",
+      "startup": "Company Hero",
+      "pipeline_run_id": "e19eb2cd-860b-4b2b-b814-0b68187e6bd9",
+      "expected_classification": null,
+      "expected_maturity": null,
+      "accepted_evidence_urls": [],
+      "expected_nvidia_technologies": [],
+      "briefing_utility_1_5": null,
+      "reviewed_by": null,
+      "review_notes": ""
+    }
+  ]
 }
