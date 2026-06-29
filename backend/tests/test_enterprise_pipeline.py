@@ -1,5 +1,9 @@
 from app.core.schemas import NVIDIARecommendationOutput
-from app.services.enterprise_pipeline import EnterprisePipeline, run_enterprise_pipeline
+from app.services.enterprise_pipeline import (
+    STAGE_CACHE_VERSIONS,
+    EnterprisePipeline,
+    run_enterprise_pipeline,
+)
 from tests.test_scraper_agent import FakeSession
 
 
@@ -51,6 +55,10 @@ def test_enterprise_pipeline_returns_all_nine_trace_stages(monkeypatch, tmp_path
     assert result["impacto_estimado"]["startup"] == "Clara Pagamentos"
     assert result["briefing_markdown"].startswith("# Briefing NVIDIA Inception")
     assert all("output" in stage for stage in result["trace"].values())
+
+
+def test_rag_cache_version_is_bumped_when_retrieval_contract_changes():
+    assert STAGE_CACHE_VERSIONS["nvidia_recommender_rag"] == "v2"
 
 
 def test_source_warning_does_not_become_critical_when_results_exist():

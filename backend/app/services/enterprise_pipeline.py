@@ -30,6 +30,11 @@ from app.core.schemas import PipelineInput, PipelineOutput, StageTrace
 from app.rag.recommender import NVIDIARecommenderRAG
 
 
+STAGE_CACHE_VERSIONS = {
+    "nvidia_recommender_rag": "v2",
+}
+
+
 class EnterprisePipeline:
     def __init__(
         self,
@@ -282,7 +287,8 @@ class EnterprisePipeline:
     ) -> dict[str, Any]:
         started = time.perf_counter()
         self._notify_persistence_stage_started(state, stage)
-        cache_key = self.cache.key_for(f"v1_{stage}", input_payload)
+        cache_version = STAGE_CACHE_VERSIONS.get(stage, "v1")
+        cache_key = self.cache.key_for(f"{cache_version}_{stage}", input_payload)
         if self.use_cache:
             cached = self.cache.get(cache_key)
             if cached is not None:
