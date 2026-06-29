@@ -79,7 +79,7 @@ def _consolidar_grupo(grupo: list[dict[str, Any]]) -> dict[str, Any]:
     nome = melhor.get("nome") or "Startup sem nome"
     aliases = sorted(
         {
-            item.get("nome")
+            str(item["nome"])
             for item in grupo
             if item.get("nome") and item.get("nome") != nome
         }

@@ -26,3 +26,17 @@ que o lote ficar terminal, regenere sem essa flag e publique também o relatóri
 ```bash
 python scripts/generate_batch_acceptance_report.py <batch_id>
 ```
+
+## Auditoria automatica
+
+Para validar todos os artefatos persistidos, inclusive quando as tabelas ultrapassam
+o limite de 1000 linhas da Data API:
+
+```bash
+cd backend
+python scripts/audit_batch_quality.py <batch_id>
+```
+
+O comando falha quando encontra startup sem fonte rastreavel, evidencia qualificada,
+trace, classificacao, recomendacao fundamentada, impacto ou briefing. A aprovacao
+automatica nao substitui a revisao humana da amostra.

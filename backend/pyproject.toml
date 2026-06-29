@@ -15,7 +15,6 @@ check_untyped_defs = true
 warn_unused_ignores = true
 show_error_codes = true
 files = [
-  "app/core/schemas.py",
-  "app/evaluation",
-  "app/agents/inception_fit_agent.py",
+  "app",
+  "scripts",
 ]
