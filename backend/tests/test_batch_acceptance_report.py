@@ -41,3 +41,23 @@ def test_batch_report_calculates_progress_cost_and_gates():
     assert "USD 0.0100" in report
     assert "[x] 50/50 em estado terminal" in report
     assert "[x] 100% dos terminais rastreaveis" in report
+    assert "Casos partial" not in report
+
+
+def test_batch_report_lists_partial_and_external_api_failures_as_pending():
+    now = datetime.now(UTC)
+    report = render_batch_report(
+        {
+            "id": "batch-2",
+            "status": "partial",
+            "total_items": 1,
+            "started_at": now.isoformat(),
+            "finished_at": now.isoformat(),
+        },
+        [{"status": "partial", "pipeline_run_id": "run-1", "result_summary": {}}],
+        [{"warnings": [], "source_errors": [], "errors": []}],
+        [{"units": 1, "cache_hit": False, "success": False, "estimated_cost_usd": 0}],
+    )
+
+    assert "Casos partial" in report
+    assert "confirmar creditos e credenciais" in report

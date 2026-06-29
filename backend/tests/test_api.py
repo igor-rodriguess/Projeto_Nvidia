@@ -106,6 +106,35 @@ def test_health_endpoint():
     assert response.json()["status"] == "ok"
 
 
+def test_cors_preflight_allows_local_frontend():
+    with TestClient(app) as client:
+        response = client.options(
+            "/api/v1/startups",
+            headers={
+                "Origin": "http://localhost:5173",
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "authorization",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
+def test_cors_preflight_rejects_unknown_origin():
+    with TestClient(app) as client:
+        response = client.options(
+            "/api/v1/startups",
+            headers={
+                "Origin": "https://untrusted.example",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+
+    assert response.status_code == 400
+    assert "access-control-allow-origin" not in response.headers
+
+
 def test_create_batch_queues_for_external_worker(monkeypatch):
     monkeypatch.setenv("BACKEND_API_KEY", "test-api-key")
     service = FakeBatchService()

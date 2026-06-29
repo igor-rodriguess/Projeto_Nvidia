@@ -92,9 +92,9 @@ def render_batch_report(
     lines = [
         f"# Relatorio de Aceitacao do Lote {batch['id']}",
         "",
-        f"**Estado do relatorio:** {'FINAL' if is_terminal else 'INTERMEDIARIO'}  ",
-        f"**Status do lote:** {batch.get('status')}  ",
-        f"**Gerado em:** {datetime.now(UTC).isoformat()}  ",
+        f"**Estado do relatorio:** {'FINAL' if is_terminal else 'INTERMEDIARIO'}",
+        f"**Status do lote:** {batch.get('status')}",
+        f"**Gerado em:** {datetime.now(UTC).isoformat()}",
         f"**Duracao observada:** {duration_seconds:.1f} segundos",
         "",
         "## Progresso",
@@ -128,15 +128,15 @@ def render_batch_report(
         ]
     )
     lines.extend(f"- [{'x' if passed else ' '}] {name}" for name, passed in gates.items())
-    lines.extend(
-        [
-            "",
-            "## Pendencias",
-            "",
-            "- A concordancia e a utilidade dependem do preenchimento humano da amostra.",
-            "- Casos partial devem ser revisados por causa antes da aprovacao final.",
-        ]
-    )
+    pending = ["A concordancia e a utilidade dependem do preenchimento humano da amostra."]
+    if partial_count:
+        pending.append("Casos partial devem ser revisados por causa antes da aprovacao final.")
+    if api_failures:
+        pending.append(
+            "APIs externas registraram falhas; confirmar creditos e credenciais antes de producao."
+        )
+    lines.extend(["", "## Pendencias", ""])
+    lines.extend(f"- {item}" for item in pending)
     return "\n".join(lines) + "\n"
 
 
