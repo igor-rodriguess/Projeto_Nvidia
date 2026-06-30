@@ -9,6 +9,7 @@ import type {
   BatchCreateRequest,
   ApiMetrics,
   Evidence,
+  POCBlueprint,
 } from '@/types/api'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
@@ -88,6 +89,9 @@ export const getRunBriefing = (runId: string) =>
 
 export const getRunEvidences = (runId: string) =>
   api.get<Evidence[]>(`/api/v1/runs/${runId}/evidences`).then((r) => r.data)
+
+export const getPOCBlueprint = (runId: string) =>
+  api.get<POCBlueprint>(`/api/v1/runs/${runId}/poc-blueprint`).then((r) => r.data)
 
 // Batches
 export const listBatches = (limit = 20) =>

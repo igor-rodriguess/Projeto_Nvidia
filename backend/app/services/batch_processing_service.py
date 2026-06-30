@@ -203,7 +203,9 @@ class BatchProcessingService:
         item_id = UUID(item["id"])
         self.repository.start_item(item_id)
         try:
-            result = self.pipeline_runner(_pipeline_payload(item["startup_payload"]))
+            payload = _pipeline_payload(item["startup_payload"])
+            payload["thread_id"] = str(item_id)
+            result = self.pipeline_runner(payload)
             result_status = result.get("status", "falha")
             item_status = cast(BatchItemStatus, {
                 "completo": "completed",

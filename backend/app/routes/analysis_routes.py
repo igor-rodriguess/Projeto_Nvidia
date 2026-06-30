@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.persistence.persistence_service import PipelinePersistence
+from app.agents.poc_blueprint_agent import POCBlueprintAgent
 from app.routes.dependencies import get_persistence
 from app.routes.security import enforce_security
 
@@ -185,6 +186,38 @@ def get_evidences(
         }
         for evidence in evidences
     ]
+
+
+@router.get("/runs/{run_id}/poc-blueprint")
+def get_poc_blueprint(
+    run_id: UUID,
+    persistence: PipelinePersistence = Depends(get_persistence),
+) -> dict[str, Any]:
+    run = _one(
+        persistence.db.table("pipeline_runs")
+        .select("id,startup_id")
+        .eq("id", str(run_id))
+        .limit(1)
+        .execute()
+    )
+    if not run:
+        raise HTTPException(status_code=404, detail="Execucao nao encontrada")
+    startup = None
+    if run.get("startup_id"):
+        startup = _one(
+            persistence.db.table("startups")
+            .select("nome")
+            .eq("id", run["startup_id"])
+            .limit(1)
+            .execute()
+        )
+    refinement = _artifact(persistence, "recommendation_refinements", run_id)
+    impact = _artifact(persistence, "impact_estimates", run_id)
+    return POCBlueprintAgent().generate(
+        startup=(startup or {}).get("nome", "Startup"),
+        refinement=refinement,
+        impact=impact,
+    )
 
 
 def _artifact(

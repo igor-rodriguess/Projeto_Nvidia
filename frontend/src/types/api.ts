@@ -232,6 +232,25 @@ export interface Evidence {
   source: EvidenceSource | null
 }
 
+export interface POCBlueprint {
+  startup: string
+  purpose: string
+  baseline_checklist: string[]
+  workstreams: Array<{
+    technology: string
+    phase: string
+    objective: string
+    prerequisites: string[]
+    kpis: string[]
+    acceptance_criteria: string[]
+    risks: string[]
+    sources: string[]
+  }>
+  timeline: Array<{ phase: string; activity: string }>
+  uncertainties: string[]
+  markdown: string
+}
+
 export interface BatchCreateRequest {
   source_file?: string
   limit?: number

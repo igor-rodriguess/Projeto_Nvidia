@@ -272,6 +272,27 @@ def test_run_evidences_include_traceable_source(monkeypatch):
         app.dependency_overrides.clear()
 
 
+def test_poc_blueprint_exposes_measurable_plan(monkeypatch):
+    monkeypatch.setenv("BACKEND_API_KEY", "test-api-key")
+    run_id = uuid4()
+    persistence = type("Persistence", (), {"db": RunDatabase(run_id)})()
+    app.dependency_overrides[get_persistence] = lambda: persistence
+    try:
+        with TestClient(app) as client:
+            response = client.get(
+                f"/api/v1/runs/{run_id}/poc-blueprint",
+                headers=AUTH,
+            )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["baseline_checklist"]
+        assert payload["timeline"]
+        assert "workstreams" in payload
+        assert "# NVIDIA POC Blueprint" in payload["markdown"]
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_metrics_are_exposed_with_authentication(monkeypatch):
     monkeypatch.setenv("METRICS_BEARER_TOKEN", "test-metrics-token")
     app.dependency_overrides[get_persistence] = lambda: FakePersistence()

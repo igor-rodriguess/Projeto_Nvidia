@@ -61,6 +61,23 @@ def test_rag_cache_version_is_bumped_when_retrieval_contract_changes():
     assert STAGE_CACHE_VERSIONS["nvidia_recommender_rag"] == "v2"
 
 
+def test_enterprise_pipeline_is_compiled_as_state_graph(monkeypatch, tmp_path):
+    monkeypatch.setenv("LANGGRAPH_CHECKPOINT_PATH", str(tmp_path / "checkpoints.sqlite"))
+    pipeline = EnterprisePipeline(
+        session=FakeSession(),
+        recommender=FakeRecommender(),
+        use_cache=False,
+        delay_seconds=0,
+        retry_wait_multiplier=0,
+    )
+
+    graph = pipeline.runnable.get_graph()
+    assert "research_feedback" in graph.nodes
+    assert "evidence_validator" in graph.nodes
+    assert "briefing_generator" in graph.nodes
+    assert pipeline.checkpointer is not None
+
+
 def test_source_warning_does_not_become_critical_when_results_exist():
     pipeline = object.__new__(EnterprisePipeline)
     state = {

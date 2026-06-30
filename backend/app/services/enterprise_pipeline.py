@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import os
+import sqlite3
 import time
 from collections.abc import Callable
-from typing import Any
+from pathlib import Path
+from typing import Any, TypedDict
+from uuid import uuid4
 
 import requests
-from langchain_core.runnables import Runnable, RunnableLambda
+from langchain_core.runnables import Runnable
+from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.graph import END, START, StateGraph
+from langgraph.types import RetryPolicy
 
 from app.chains.agent_chains import (
     create_briefing_generator_chain,
@@ -33,6 +40,27 @@ from app.rag.recommender import NVIDIARecommenderRAG
 STAGE_CACHE_VERSIONS = {
     "nvidia_recommender_rag": "v2",
 }
+
+
+class EnterprisePipelineState(TypedDict, total=False):
+    request: dict[str, Any]
+    input: dict[str, Any]
+    trace: dict[str, Any]
+    errors: list[Any]
+    warnings: list[str]
+    source_errors: list[Any]
+    critical_errors: list[Any]
+    investigation_attempt: int
+    search_plan: dict[str, Any]
+    scraper_output: dict[str, Any]
+    validation_output: dict[str, Any]
+    classification_output: dict[str, Any]
+    inception_fit_output: dict[str, Any]
+    recommendation_output: dict[str, Any]
+    refinement_output: dict[str, Any]
+    impact_output: dict[str, Any]
+    briefing_output: dict[str, Any]
+    final_output: dict[str, Any]
 
 
 class EnterprisePipeline:
@@ -97,29 +125,108 @@ class EnterprisePipeline:
             agent=briefing_generator_agent,
             enable_retry=False,
         )
+        self.checkpointer = self._create_checkpointer()
         self.runnable = self._build_runnable()
 
     def invoke(self, payload: PipelineInput | dict[str, Any]) -> dict[str, Any]:
-        raw = payload.model_dump(mode="json") if isinstance(payload, PipelineInput) else payload
-        return self.runnable.invoke(raw)
+        raw = (
+            payload.model_dump(mode="json")
+            if isinstance(payload, PipelineInput)
+            else dict(payload)
+        )
+        thread_id = str(raw.pop("thread_id", None) or uuid4())
+        result = self.runnable.invoke(
+            {"request": raw},
+            config={"configurable": {"thread_id": thread_id}, "recursion_limit": 30},
+        )
+        return result["final_output"]
 
     def _build_runnable(self) -> Runnable[dict[str, Any], dict[str, Any]]:
-        return (
-            RunnableLambda(self._initialize)
-            | RunnableLambda(self._search_stage)
-            | RunnableLambda(self._scraper_stage)
-            | RunnableLambda(self._validator_stage)
-            | RunnableLambda(self._classifier_stage)
-            | RunnableLambda(self._inception_fit_stage)
-            | RunnableLambda(self._recommender_stage)
-            | RunnableLambda(self._recommendation_refiner_stage)
-            | RunnableLambda(self._impact_estimator_stage)
-            | RunnableLambda(self._briefing_generator_stage)
-            | RunnableLambda(self._finalize)
-        )
+        graph = StateGraph(EnterprisePipelineState)
+        retry = RetryPolicy(max_attempts=3, initial_interval=0.5, backoff_factor=2.0)
+        graph.add_node("initialize", self._initialize)
+        graph.add_node("search_planner", self._search_stage, retry_policy=retry)
+        graph.add_node("scraper", self._scraper_stage, retry_policy=retry)
+        graph.add_node("evidence_validator", self._validator_stage, retry_policy=retry)
+        graph.add_node("research_feedback", self._research_feedback)
+        graph.add_node("ai_maturity_classifier", self._classifier_stage)
+        graph.add_node("inception_fit", self._inception_fit_stage)
+        graph.add_node("nvidia_recommender_rag", self._recommender_stage, retry_policy=retry)
+        graph.add_node("recommendation_refiner", self._recommendation_refiner_stage)
+        graph.add_node("impact_estimator", self._impact_estimator_stage)
+        graph.add_node("briefing_generator", self._briefing_generator_stage)
+        graph.add_node("finalize", self._finalize)
 
-    def _initialize(self, payload: dict[str, Any]) -> dict[str, Any]:
-        pipeline_input = validate_contract(PipelineInput, payload)
+        graph.add_edge(START, "initialize")
+        graph.add_edge("initialize", "search_planner")
+        graph.add_edge("search_planner", "scraper")
+        graph.add_edge("scraper", "evidence_validator")
+        graph.add_conditional_edges(
+            "evidence_validator",
+            self._route_after_validation,
+            {"retry_research": "research_feedback", "classify": "ai_maturity_classifier"},
+        )
+        graph.add_edge("research_feedback", "search_planner")
+        graph.add_edge("ai_maturity_classifier", "inception_fit")
+        graph.add_edge("inception_fit", "nvidia_recommender_rag")
+        graph.add_edge("nvidia_recommender_rag", "recommendation_refiner")
+        graph.add_edge("recommendation_refiner", "impact_estimator")
+        graph.add_edge("impact_estimator", "briefing_generator")
+        graph.add_edge("briefing_generator", "finalize")
+        graph.add_edge("finalize", END)
+        return graph.compile(checkpointer=self.checkpointer)
+
+    @staticmethod
+    def _create_checkpointer() -> SqliteSaver:
+        checkpoint_path = Path(
+            os.getenv(
+                "LANGGRAPH_CHECKPOINT_PATH",
+                Path(__file__).resolve().parents[2]
+                / "data"
+                / "cache"
+                / "langgraph"
+                / "checkpoints.sqlite",
+            )
+        )
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        connection = sqlite3.connect(checkpoint_path, check_same_thread=False)
+        return SqliteSaver(connection)
+
+    @staticmethod
+    def _route_after_validation(state: dict[str, Any]) -> str:
+        validation = state.get("validation_output") or {}
+        evidence_count = len(validation.get("evidencias_validadas") or []) + len(
+            validation.get("evidencias_medias") or []
+        )
+        scraper = state.get("scraper_output") or {}
+        has_collected_data = bool(
+            scraper.get("resultados_buscas") or scraper.get("paginas_completas")
+        )
+        attempts = int(state.get("investigation_attempt", 0))
+        if evidence_count == 0 and has_collected_data and attempts < 1:
+            return "retry_research"
+        return "classify"
+
+    @staticmethod
+    def _research_feedback(state: dict[str, Any]) -> dict[str, Any]:
+        attempt = int(state.get("investigation_attempt", 0)) + 1
+        input_payload = dict(state["input"])
+        context = str(input_payload.get("contexto") or "").strip()
+        input_payload["contexto"] = (
+            context
+            + " Busca complementar: priorize site oficial, documentação técnica, vagas de ML e fontes independentes corroboradas."
+        ).strip()
+        state["input"] = input_payload
+        state["investigation_attempt"] = attempt
+        state["warnings"].append(
+            "LangGraph acionou investigação complementar por ausência de evidência qualificada."
+        )
+        for key in ("search_plan", "scraper_output", "validation_output"):
+            state.pop(key, None)
+        return state
+
+    def _initialize(self, state: EnterprisePipelineState) -> dict[str, Any]:
+        pipeline_input = validate_contract(PipelineInput, state.get("request", {}))
         state = {
             "input": pipeline_input.model_dump(mode="json"),
             "trace": {},
@@ -127,6 +234,7 @@ class EnterprisePipeline:
             "warnings": [],
             "source_errors": [],
             "critical_errors": [],
+            "investigation_attempt": 0,
         }
         if self.persistence_hook is not None:
             try:
@@ -393,7 +501,8 @@ class EnterprisePipeline:
             "source_errors": state["source_errors"],
             "critical_errors": critical_errors,
         }
-        return validate_contract(PipelineOutput, output).model_dump(mode="json")
+        validated = validate_contract(PipelineOutput, output).model_dump(mode="json")
+        return {"final_output": validated}
 
     def _notify_persistence_stage(
         self,

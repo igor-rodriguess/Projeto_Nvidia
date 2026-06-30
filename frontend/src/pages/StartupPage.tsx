@@ -18,15 +18,16 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import { PipelineTimeline } from '@/components/pipeline/PipelineTimeline'
 import { useStartup } from '@/hooks/useStartups'
-import { getRunAnalysis, getRunEvidences } from '@/lib/api'
-import type { Evidence, RunAnalysis } from '@/types/api'
+import { getPOCBlueprint, getRunAnalysis, getRunEvidences } from '@/lib/api'
+import type { Evidence, POCBlueprint, RunAnalysis } from '@/types/api'
 
-type TabId = 'diagnosis' | 'evidences' | 'recommendations' | 'impact' | 'briefing' | 'history'
+type TabId = 'diagnosis' | 'evidences' | 'recommendations' | 'poc' | 'impact' | 'briefing' | 'history'
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'diagnosis', label: 'Diagnostico de IA' },
   { id: 'evidences', label: 'Evidencias' },
   { id: 'recommendations', label: 'Recomendacao NVIDIA' },
+  { id: 'poc', label: 'POC Blueprint' },
   { id: 'impact', label: 'Impacto' },
   { id: 'briefing', label: 'Briefing' },
   { id: 'history', label: 'Historico' },
@@ -54,6 +55,7 @@ export default function StartupPage() {
   const [activeTab, setActiveTab] = useState<TabId>('diagnosis')
   const [analysis, setAnalysis] = useState<RunAnalysis | null>(null)
   const [evidences, setEvidences] = useState<Evidence[]>([])
+  const [pocBlueprint, setPOCBlueprint] = useState<POCBlueprint | null>(null)
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [evidenceFilter, setEvidenceFilter] = useState('all')
@@ -65,12 +67,14 @@ export default function StartupPage() {
     setAnalysisLoading(true)
     setAnalysisError(null)
     try {
-      const [analysisData, evidenceData] = await Promise.all([
+      const [analysisData, evidenceData, pocData] = await Promise.all([
         getRunAnalysis(latestRun.id),
         getRunEvidences(latestRun.id),
+        getPOCBlueprint(latestRun.id).catch(() => null),
       ])
       setAnalysis(analysisData)
       setEvidences(evidenceData)
+      setPOCBlueprint(pocData)
     } catch (requestError) {
       setAnalysisError(requestError instanceof Error ? requestError.message : 'Falha ao carregar analise')
     } finally {
@@ -154,6 +158,7 @@ export default function StartupPage() {
           {activeTab === 'diagnosis' && <DiagnosisTab analysis={analysis} />}
           {activeTab === 'evidences' && <EvidencesTab items={visibleEvidences} filter={evidenceFilter} onFilter={setEvidenceFilter} total={evidences.length} />}
           {activeTab === 'recommendations' && <RecommendationTab analysis={analysis} />}
+          {activeTab === 'poc' && <POCBlueprintTab blueprint={pocBlueprint} startupName={startup.nome} />}
           {activeTab === 'impact' && <ImpactTab analysis={analysis} />}
           {activeTab === 'briefing' && <GlassPanel><div className="flex justify-between items-center gap-2 mb-4 flex-wrap"><h3>Briefing executivo</h3><div className="flex gap-2"><Button size="sm" variant="ghost" icon={<Copy size={14} />} onClick={copyBriefing}>{copyFeedback || 'Copiar'}</Button><Button size="sm" variant="ghost" icon={<Download size={14} />} onClick={downloadBriefing}>Markdown</Button><Button size="sm" variant="ghost" icon={<Printer size={14} />} onClick={() => window.print()}>PDF</Button></div></div>{briefing?.markdown && /\d+(?:[.,]\d+)?\s*%/.test(briefing.markdown) && <div className="card mb-3" style={{ borderColor: 'var(--status-warning)' }}><strong>Alegacoes quantitativas</strong><p className="text-sm text-muted mt-1">Confirme percentuais nas fontes da aba Evidencias antes de usa-los em decisoes externas.</p></div>}{briefing?.markdown ? <div className="markdown"><ReactMarkdown>{briefing.markdown}</ReactMarkdown></div> : <p className="text-muted">Briefing nao disponivel.</p>}</GlassPanel>}
           {activeTab === 'history' && <HistoryTab startup={startup} latestRunId={latestRun.id} />}
@@ -186,6 +191,32 @@ function RecommendationTab({ analysis }: { analysis: RunAnalysis | null }) {
     <GlassPanel><h3>Tecnologias NVIDIA priorizadas</h3><div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>{refinement?.technologies.length ? refinement.technologies.map((item) => <div className="card" key={item.tecnologia}><div className="flex justify-between gap-2 flex-wrap"><strong>{item.tecnologia}</strong><span className="badge badge-gray">Complexidade {item.complexidade}</span></div><p className="text-sm mt-2">{item.problema_resolvido}</p><p className="text-sm text-muted mt-2">{item.beneficio}</p><p className="text-xs text-muted mt-2">Risco: {item.riscos}</p><div className="mt-2">{item.fontes_evidencia.map((url) => <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="text-xs" style={{ display: 'block', color: 'var(--accent)', overflowWrap: 'anywhere' }}>{url}</a>)}</div></div>) : recommendation?.technologies.map((item) => <div className="card" key={item.name}><strong>{item.name}</strong><p className="text-sm text-muted mt-2">{item.rationale}</p></div>)}</div></GlassPanel>
     {!!refinement?.startup_questions.length && <GlassPanel><h3>Proximos passos</h3><ol style={{ paddingLeft: '1.25rem', marginTop: '0.75rem' }}>{refinement.startup_questions.map((question) => <li className="text-sm text-muted mb-2" key={question}>{question}</li>)}</ol></GlassPanel>}
   </div>
+}
+
+function POCBlueprintTab({ blueprint, startupName }: { blueprint: POCBlueprint | null; startupName: string }) {
+  const download = () => {
+    if (!blueprint?.markdown) return
+    const blob = new Blob([blueprint.markdown], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `${startupName}-poc-blueprint.md`
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return <GlassPanel>
+    <div className="flex justify-between gap-2 mb-4">
+      <div>
+        <h3>NVIDIA POC Blueprint</h3>
+        <p className="text-sm text-muted mt-1">Plano mensurável, sem promessa de ganho antes do benchmark.</p>
+      </div>
+      <Button size="sm" variant="ghost" icon={<Download size={14} />} onClick={download}>Markdown</Button>
+    </div>
+    {blueprint?.markdown
+      ? <div className="markdown"><ReactMarkdown>{blueprint.markdown}</ReactMarkdown></div>
+      : <p className="text-muted">Blueprint indisponível.</p>}
+  </GlassPanel>
 }
 
 function ImpactTab({ analysis }: { analysis: RunAnalysis | null }) {

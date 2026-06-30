@@ -1,125 +1,255 @@
 # NVIDIA Startup AI Radar
 
-Plataforma multiagente de inteligência artificial para identificação, análise e recomendação de tecnologias NVIDIA para startups brasileiras AI-native.
+**Mapeando o ecossistema de startups brasileiras de IA e conectando-as à stack NVIDIA.**
 
-## Objetivo
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![Tests](https://img.shields.io/badge/tests-143%20passing-76B900)
+![License](https://img.shields.io/badge/license-not%20defined-lightgrey)
 
-Apoiar a NVIDIA na identificação de startups brasileiras com uso intensivo de IA, avaliando sua maturidade técnica, possíveis gaps de infraestrutura e oportunidades de adoção de tecnologias NVIDIA.
+## 📋 Índice
 
-## Funcionalidades previstas
+- [Visão Geral](#-visão-geral)
+- [Arquitetura](#-arquitetura-do-sistema)
+- [Funcionalidades](#️-funcionalidades-principais)
+- [Como Executar](#-começando)
+- [Estrutura](#-estrutura-do-projeto)
+- [API](#-api-endpoints-principais)
+- [Testes](#-testes)
+- [Base NVIDIA](#-base-de-conhecimento-nvidia)
+- [Segurança](#️-segurança)
+- [Licença](#-licença)
 
-- Busca de startups brasileiras por nome, setor ou palavra-chave.
-- Coleta de informações públicas.
-- Extração estruturada de dados.
-- Classificação da maturidade AI-native.
-- Identificação de gaps técnicos.
-- Consulta a uma base RAG com tecnologias NVIDIA.
-- Recomendação personalizada de tecnologias NVIDIA.
-- Geração de briefing executivo.
-- Score de oportunidade para abordagem comercial.
+## 🎯 Visão Geral
 
-## Diferenciais
+Startups que dependem apenas de APIs genéricas de LLM enfrentam diferenciação limitada à medida que grandes laboratórios ampliam seus próprios produtos. O Radar identifica empresas com sinais verificáveis de IA, diferencia consumo de API de desenvolvimento próprio e aponta caminhos técnicos fundamentados na documentação oficial NVIDIA.
 
-- Estimativa de impacto da tecnologia NVIDIA.
-- Priorização de startups com maior fit.
-- Sugestão de próxima ação para o time NVIDIA.
-- Identificação de contatos públicos de founders ou decisores.
+O sistema coleta informações públicas, valida evidências, classifica maturidade, consulta uma base RAG NVIDIA e produz recomendações, estimativas de impacto e briefings executivos. O público principal é o time NVIDIA Inception Brasil, especialmente gestores de Startups & VCs.
 
-## Pipeline atual
+## 🧠 Arquitetura do Sistema
 
 ```text
-Cubo Itaú
-  -> dados raw
-  -> dados processed
-  -> dados curated
-  -> Search Planner Agent
-  -> Scraper Agent
-  -> Evidence Validator Agent
-  -> AI Maturity Classifier Agent
-  -> Inception Fit Agent
-  -> NVIDIA Recommender RAG
-  -> Recommendation Agent
-  -> Impact Estimator Agent
-  -> Briefing Generator Agent
+Cubo Itaú / fontes públicas
+        │
+        ▼
+RAW → PROCESSED → CURATED
+        │
+        ▼
+Search Planner → Scraper → Evidence Validator → AI Maturity Classifier
+        │
+        ▼
+Inception Fit → NVIDIA RAG → Recommendation → Impact Estimator
+        │
+        ▼
+Briefing Generator → POC Blueprint → Supabase → FastAPI → React
 ```
 
-O Evidence Validator Agent audita os resultados coletados, remove URLs quebradas,
-homônimos e menções irrelevantes, classifica a credibilidade das fontes e identifica
-evidências de IA. O resultado consolidado será a entrada do futuro AI Maturity
-Classifier.
+O pipeline usa **LangGraph StateGraph**, estado tipado, contratos Pydantic, retry por nó e checkpoint SQLite. Quando uma coleta não produz evidência qualificada, uma aresta condicional aciona uma busca complementar antes da classificação. O worker processa lotes duráveis com heartbeat, lease e dead-letter queue e reutiliza o identificador do item como `thread_id` do grafo.
 
-O AI Maturity Classifier usa somente evidências com confiança mínima de 0,4 para
-classificar a startup como `AI-native`, `AI-enabled`, `API-consumer` ou `Non-AI`.
-Ele também registra nível de maturidade, tecnologias encontradas, limitações e as
-fontes exatas que sustentam a decisão.
+| Camada | Tecnologias |
+|---|---|
+| Backend | Python, FastAPI, Pydantic, LangGraph, LangChain Core |
+| Busca e extração | SearXNG, DDGS, Firecrawl opcional, Trafilatura, RSS |
+| Dados | Supabase PostgreSQL e Storage |
+| RAG | Qdrant, FastEmbed, BM25, RRF e reranking lexical/BGE |
+| Frontend | React 19, TypeScript, Vite 8, Zustand, Axios, Recharts |
+| Infraestrutura | Docker Compose, GitHub Actions, Prometheus opcional |
 
-Para investigar uma startup da base curated:
+O detalhamento das decisões e contratos está em [WAD.md](WAD.md).
+
+## ⚙️ Funcionalidades Principais
+
+- Scraping resiliente do portfólio Cubo Itaú com camadas RAW, PROCESSED e CURATED.
+- Investigação pública com planejamento de consultas, cache e fallback de provedores.
+- Evidências rastreáveis por URL, trecho, tipo de fonte e confiança.
+- Classificação `AI-native`, `AI-enabled`, `API-consumer` ou `Non-AI`.
+- Avaliação de aderência e benefícios do NVIDIA Inception.
+- RAG híbrido com documentação oficial NVIDIA e citações por chunk.
+- Roadmap técnico, riscos, dependências e prova de conceito sugerida.
+- Estimativa de impacto conservadora, com premissas e incertezas.
+- Briefing executivo em Markdown, copiável e exportável.
+- NVIDIA POC Blueprint com baseline, workstreams, KPIs, critérios de aceite, riscos e cronograma.
+- Dashboard autenticado, RBAC, lotes, polling, histórico e métricas.
+
+## 🚀 Começando
+
+### Pré-requisitos
+
+- Python 3.11 ou superior.
+- Node.js 20 ou superior e npm.
+- Docker Desktop com Docker Compose.
+- Projeto Supabase com a migration aplicada.
+- Firecrawl opcional para páginas que exigem JavaScript.
+- OpenAI opcional; o modo padrão usa embeddings locais e geração determinística.
+
+### 1. Configurar o ambiente
 
 ```bash
-cd backend
-python scripts/investigar_startup_ia.py data/curated/_cubo/<arquivo>.json "Nome da Startup"
+git clone https://github.com/igor-rodriguess/Projeto_Nvidia.git
+cd Projeto_Nvidia
+cp .env.example .env
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local
 ```
 
-As coletas brutas são salvas em `backend/data/raw/_evidencias/` e as evidências
-validadas em `backend/data/processed/_evidencias/`.
-As classificações são salvas em `backend/data/curated/_maturidade_ia/`.
+Preencha as variáveis do Supabase. Use somente a chave publicável no frontend; a chave secreta deve permanecer no backend.
 
-## Execução local
+### 2. Subir Qdrant e SearXNG
 
 ```bash
 docker compose up -d qdrant searxng
-cd backend
-python -m pip install -r requirements.txt
+docker compose ps
 ```
 
-Crie `backend/.env` a partir de `backend/.env.example`. O modo padrão usa embeddings
-FastEmbed locais e geração determinística, portanto não exige uma chave OpenAI. A
-chave Firecrawl continua opcional para páginas que dependem de JavaScript.
+- Qdrant: `http://localhost:6333/dashboard`
+- SearXNG: `http://localhost:8080`
 
-Para ingerir a documentação oficial NVIDIA:
+### 3. Instalar e preparar o backend
 
 ```bash
+cd backend
+python -m venv .venv
+```
+
+Linux/macOS:
+
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+Aplicar a migration e ingerir a base NVIDIA:
+
+```bash
+python scripts/apply_supabase_migration.py
 python scripts/ingest_nvidia_knowledge.py
 ```
 
-Para executar os nove estágios de investigação e recomendação:
+### 4. Iniciar API e worker
+
+Em terminais separados, dentro de `backend/`:
 
 ```bash
-python scripts/run_enterprise_pipeline.py "Nome da Startup" "https://startup.com"
-```
-
-O resultado contém `trace` com a saída, duração, tentativas, tokens e erros de cada
-agente, além de `recomendacao_refinada`, `impacto_estimado` e `briefing_markdown`.
-Resultados intermediários são cacheados em `backend/data/cache/pipeline/`.
-
-Mais detalhes estão em [docs/rag_architecture.md](docs/rag_architecture.md) e
-[docs/operations.md](docs/operations.md).
-
-## Persistência
-
-O Supabase PostgreSQL armazena startups, execuções, consultas, fontes, evidências,
-classificações, recomendações, estimativas de impacto e briefings. Traces grandes ficam no bucket privado
-`pipeline-traces`; o Qdrant permanece dedicado à recuperação vetorial.
-
-As instruções e a migration estão em
-[backend/app/persistence/README.md](backend/app/persistence/README.md).
-
-## API e lotes
-
-A API FastAPI permite processar automaticamente a base CURATED, acompanhar cada
-startup e retomar lotes interrompidos. Para iniciar localmente:
-
-```bash
-cd backend
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+python scripts/run_batch_worker.py --poll-seconds 5
 ```
 
-A documentação interativa fica em `http://127.0.0.1:8000/docs`. O guia de endpoints,
-CLI e retomada está em [docs/backend_api.md](docs/backend_api.md).
-
-Os endpoints de negócio usam JWT Supabase com RBAC, e o processamento longo roda em um worker
-separado. Para iniciar API, worker, Qdrant e SearXNG em containers:
+Alternativamente, API, worker, Qdrant e SearXNG podem rodar em containers:
 
 ```bash
 docker compose --profile backend up -d --build
 ```
+
+### 5. Iniciar o frontend
+
+```bash
+cd frontend
+npm install
+npm run dev -- --host 127.0.0.1
+```
+
+Acesse `http://127.0.0.1:5173`.
+
+### Verificações de saúde
+
+```text
+GET http://127.0.0.1:8000/health
+GET http://127.0.0.1:8000/ready
+GET http://127.0.0.1:8000/docs
+```
+
+## 📁 Estrutura do Projeto
+
+```text
+Projeto_Nvidia/
+├── backend/
+│   ├── app/
+│   │   ├── agents/          # Agentes especializados
+│   │   ├── chains/          # Adaptadores LangChain Runnable
+│   │   ├── core/            # Schemas, retry, cache e observabilidade
+│   │   ├── evaluation/      # Avaliação de qualidade e golden set
+│   │   ├── persistence/     # Supabase, migration, lotes e traces
+│   │   ├── processing/      # RAW → PROCESSED → CURATED
+│   │   ├── rag/             # Ingestão, chunking, Qdrant e recomendação
+│   │   ├── routes/          # FastAPI, autenticação e métricas
+│   │   ├── scraping/        # Scraper do Cubo Itaú
+│   │   └── services/        # Pipeline, worker e retenção
+│   ├── scripts/             # Operação, ingestão, backup e auditoria
+│   └── tests/               # 143 testes automatizados
+├── frontend/
+│   └── src/
+│       ├── components/      # UI, gráficos, lotes e pipeline
+│       ├── hooks/           # Acesso assíncrono à API
+│       ├── pages/           # Dashboard, startups, lotes e login
+│       ├── store/           # Sessão Supabase com Zustand
+│       └── types/           # Contratos TypeScript
+├── infra/                   # SearXNG, Prometheus e segredos locais
+├── docker-compose.yml
+├── README.md
+└── WAD.md
+```
+
+## 🔗 API Endpoints Principais
+
+| Método | Endpoint | Descrição |
+|---|---|---|
+| GET | `/health` | Saúde do processo HTTP |
+| GET | `/ready` | Supabase, Qdrant e SearXNG |
+| GET | `/api/v1/metrics` | Métricas do dashboard |
+| GET | `/api/v1/startups` | Lista startups e última classificação |
+| GET | `/api/v1/startups/{id}` | Perfil e histórico de execuções |
+| GET | `/api/v1/runs/{id}` | Diagnóstico, recomendação, impacto e briefing |
+| GET | `/api/v1/runs/{id}/evidences` | Evidências e fontes rastreáveis |
+| GET | `/api/v1/runs/{id}/briefing` | Briefing em Markdown |
+| GET | `/api/v1/runs/{id}/poc-blueprint` | Plano de POC NVIDIA mensurável |
+| POST | `/api/v1/batches` | Cria lote durável |
+| GET | `/api/v1/batches/{id}` | Progresso e itens do lote |
+| POST | `/api/v1/batches/{id}/run` | Enfileira processamento |
+| POST | `/api/v1/batches/{id}/resume` | Retoma itens elegíveis |
+| POST | `/api/v1/batches/{id}/cancel` | Cancela lote (admin) |
+
+Endpoints `/api/v1/*` exigem JWT Supabase. A chave de API legada é permitida somente no desenvolvimento quando explicitamente habilitada.
+
+## 🧪 Testes
+
+```bash
+cd backend
+python -m pytest -q
+
+cd ../frontend
+npm run lint
+npm run build
+```
+
+O backend possui 143 testes cobrindo agentes, RAG, persistência, segurança, API, worker, carga, caos e aceitação. O CI também executa lint, type checking, Gitleaks, build Docker e smoke tests.
+
+## 📊 Base de Conhecimento NVIDIA
+
+A ingestão cobre NVIDIA NIM, Triton Inference Server, TensorRT-LLM, NeMo, NeMo Guardrails, RAPIDS, cuDF, cuML, CUDA, Riva, Omniverse, Isaac, Clara, Morpheus e NVIDIA AI Enterprise. NVIDIA Inception é tratado como programa, não como tecnologia.
+
+Documentos oficiais são extraídos, limpos, divididos em chunks de 800 caracteres com overlap de 100, enriquecidos com metadados e gravados no Qdrant com vetores densos e BM25. A ingestão é idempotente por `chunk_id` SHA-256.
+
+## 🛡️ Segurança
+
+- Autenticação JWT Supabase validada por JWKS, issuer, audience e expiração.
+- Papéis `readonly`, `analyst` e `admin` em `app_metadata.radar_role`.
+- RLS habilitado nas tabelas PostgreSQL.
+- Rate limiting compartilhado no banco e revogação de tokens.
+- Chaves secretas apenas no backend e arquivos `.env` ignorados pelo Git.
+- Traces em bucket privado e política de retenção configurável.
+
+## 📄 Licença
+
+O repositório ainda não possui um arquivo `LICENSE`. Antes de distribuição externa, defina formalmente se o uso será acadêmico, proprietário ou sob uma licença aberta aprovada pela organização.
+
+## 📬 Contato
+
+Use a área de Issues do repositório para registrar defeitos, propostas arquiteturais e solicitações de evolução.
