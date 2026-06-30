@@ -127,16 +127,16 @@ def classificar_maturidade_ia(validacao: dict[str, Any]) -> dict[str, Any]:
     normalized_text = _normalize(evidence_text)
 
     technologies = _extract_technologies(normalized_text)
-    internal_signals = _find_signals(normalized_text, INTERNAL_DEVELOPMENT_SIGNALS)
+    trusted_internal_signals = _trusted_internal_signals(ai_evidences)
     api_signals = _find_signals(normalized_text, API_SIGNALS)
     optimization_signals = _find_signals(normalized_text, OPTIMIZATION_SIGNALS)
     experimental_signals = _find_signals(normalized_text, EXPERIMENTAL_SIGNALS)
     production_signals = _find_signals(normalized_text, PRODUCTION_SIGNALS)
 
-    classification = _classify(ai_evidences, internal_signals, api_signals)
+    classification = _classify(ai_evidences, trusted_internal_signals, api_signals)
     maturity = _maturity_level(
         classification,
-        internal_signals=internal_signals,
+        internal_signals=trusted_internal_signals,
         optimization_signals=optimization_signals,
         experimental_signals=experimental_signals,
         production_signals=production_signals,
@@ -144,7 +144,7 @@ def classificar_maturidade_ia(validacao: dict[str, Any]) -> dict[str, Any]:
     confidence = _classification_confidence(
         ai_evidences,
         classification,
-        internal_signals=internal_signals,
+        internal_signals=trusted_internal_signals,
         api_signals=api_signals,
         validation=validacao,
     )
@@ -157,14 +157,14 @@ def classificar_maturidade_ia(validacao: dict[str, Any]) -> dict[str, Any]:
         "justificativa": _build_justification(
             classification,
             ai_evidences,
-            internal_signals,
+            trusted_internal_signals,
             api_signals,
         ),
         "tecnologias_utilizadas": technologies,
         "necessidades_limitacoes": _infer_needs(
             classification,
             normalized_text,
-            internal_signals,
+            trusted_internal_signals,
             optimization_signals,
         ),
         "sugestao_inicial_stack_nvidia": _preliminary_nvidia_suggestion(
@@ -211,6 +211,22 @@ def _classify(
     if api_signals and not has_non_api_ai_signal:
         return "API-consumer"
     return "AI-enabled"
+
+
+def _trusted_internal_signals(evidences: list[dict[str, Any]]) -> list[str]:
+    """Accept native-development claims only from strong, attributable evidence."""
+    trusted: list[str] = []
+    for evidence in evidences:
+        text = _normalize(_evidence_text(evidence))
+        signals = _find_signals(text, INTERNAL_DEVELOPMENT_SIGNALS)
+        attributable = (
+            evidence.get("tipo_fonte") == "oficial"
+            or bool(evidence.get("declaracao_propria"))
+            or bool(evidence.get("corroborada"))
+        )
+        if float(evidence.get("score_confianca") or 0) >= 0.7 and attributable:
+            trusted.extend(signals)
+    return list(dict.fromkeys(trusted))
 
 
 def _maturity_level(

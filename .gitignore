@@ -1,6 +1,7 @@
 __pycache__/
 .pytest_cache/
 *.pyc
+*.log
 .env
 backend/data/cache/
 backend/data/curated/_pipeline_runs/

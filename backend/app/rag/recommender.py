@@ -47,6 +47,19 @@ class NVIDIARecommenderRAG:
                 expanded_top_n = min(len(retrieved), 20)
                 reranked = self.reranker.rerank(query, retrieved, top_n=expanded_top_n)
                 result = self.generator.generate(profile, reranked)
+            filtered = [
+                recommendation
+                for recommendation in result.recomendacoes
+                if recommendation.tecnologia != "Inception"
+            ]
+            if len(filtered) != len(result.recomendacoes):
+                warning = "NVIDIA Inception e um programa, nao uma tecnologia; item movido para Inception Fit."
+                result = result.model_copy(
+                    update={
+                        "recomendacoes": filtered,
+                        "aviso": " ".join(part for part in [result.aviso, warning] if part),
+                    }
+                )
             metrics["retrieved_count"] = len(retrieved)
             metrics["reranked_count"] = len(reranked)
             metrics["result_count"] = len(result.recomendacoes)

@@ -39,7 +39,7 @@ class BriefingGeneratorAgent:
             f"- **Site:** {_clean(profile.get('site_oficial') or profile.get('site') or 'Nao informado')}",
             f"- **Categoria:** {_clean(profile.get('categoria') or 'Nao informada')}",
             f"- **Localizacao:** {location}",
-            f"- **Descricao:** {_clean(profile.get('descricao_curta') or 'Nao informada')}",
+            f"- **Descricao:** {_sourced_description(profile)}",
             f"- **Maturidade de IA:** {maturity.classificacao}, nivel {maturity.nivel_maturidade}/5, "
             f"confianca {maturity.confianca_classificacao:.0%}",
             f"- **Evidencias:** {evidence_summary}",
@@ -92,6 +92,16 @@ def _summary(profile: dict[str, Any], maturity: Any, fit: float, impact_index: i
 def _location(profile: dict[str, Any]) -> str:
     parts = [profile.get("cidade"), profile.get("estado"), profile.get("pais")]
     return ", ".join(_clean(part) for part in parts if part) or "Nao informada"
+
+
+def _sourced_description(profile: dict[str, Any]) -> str:
+    description = _clean(profile.get("descricao_curta") or "Nao informada")
+    if any(char.isdigit() for char in description) and "%" in description:
+        source = _clean(profile.get("site_oficial") or profile.get("site") or "")
+        if source:
+            return f"{description} [Fonte declarada pela startup]({source})"
+        return description + " *(alegacao quantitativa sem fonte confirmada)*"
+    return description
 
 
 def _evidence_summary(validation: Any | None) -> tuple[str, list[str]]:

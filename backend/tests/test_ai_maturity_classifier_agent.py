@@ -108,6 +108,20 @@ def test_classifier_only_uses_evidence_with_minimum_score():
     assert result["classificacao"] == "Non-AI"
 
 
+def test_classifier_requires_attributable_proof_for_ai_native():
+    evidence = _evidence(
+        "Uma pagina de terceiros menciona modelo proprietario e PyTorch.",
+        score=0.9,
+        technologies=["pytorch"],
+        corroborated=False,
+    )
+
+    result = classificar_maturidade_ia(_validation(high=[evidence]))
+
+    assert result["classificacao"] == "AI-enabled"
+    assert result["nivel_maturidade"] in {2, 3}
+
+
 def test_classifier_preserves_exact_supporting_excerpt_and_saves_json(tmp_path):
     excerpt = "A Startup Teste utiliza machine learning em seu produto."
     evidence = _evidence(excerpt)

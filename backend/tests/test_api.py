@@ -58,6 +58,7 @@ class FakeQuery:
     def order(self, *args, **kwargs): return self
     def range(self, start, end): self.rows = self.rows[start:end + 1]; return self
     def eq(self, field, value): self.rows = [row for row in self.rows if str(row.get(field)) == str(value)]; return self
+    def in_(self, field, values): self.rows = [row for row in self.rows if str(row.get(field)) in {str(value) for value in values}]; return self
     def limit(self, value): self.rows = self.rows[:value]; return self
     def execute(self):
         class Response: pass
@@ -80,6 +81,7 @@ class FakePersistence:
 class RunDatabase:
     def __init__(self, run_id):
         self.run_id = str(run_id)
+        self.source_id = str(uuid4())
 
     def table(self, name):
         if name == "pipeline_runs":
@@ -93,6 +95,68 @@ class RunDatabase:
                         "eligibility_status": "unknown",
                         "startup_stage": "unknown",
                         "fit_json": {"open_questions": ["Confirmar elegibilidade."]},
+                    }
+                ]
+            )
+        if name == "ai_assessments":
+            return FakeQuery(
+                [
+                    {
+                        "id": str(uuid4()),
+                        "pipeline_run_id": self.run_id,
+                        "classificacao": "AI-enabled",
+                        "nivel_maturidade": 3,
+                        "confianca_classificacao": 0.8,
+                        "tecnologias_utilizadas": {"modelos_apis": ["LLM"]},
+                        "justificativa": "Evidencias publicas qualificadas.",
+                    }
+                ]
+            )
+        if name == "nvidia_recommendations":
+            return FakeQuery(
+                [
+                    {
+                        "id": str(uuid4()),
+                        "pipeline_run_id": self.run_id,
+                        "fit_score": 0.86,
+                        "recomendacao_json": {
+                            "recomendacoes": [
+                                {
+                                    "tecnologia": "Triton",
+                                    "fit_score": 0.86,
+                                    "justificativa": "Escala de inferencia.",
+                                    "dores_atendidas": ["latencia"],
+                                }
+                            ]
+                        },
+                    }
+                ]
+            )
+        if name == "evidences":
+            return FakeQuery(
+                [
+                    {
+                        "id": str(uuid4()),
+                        "pipeline_run_id": self.run_id,
+                        "source_id": self.source_id,
+                        "trecho": "A startup utiliza machine learning.",
+                        "score_confianca": 0.9,
+                        "classificacao": "alta",
+                        "contem_ia": True,
+                        "descartada": False,
+                        "motivo_descarte": None,
+                    }
+                ]
+            )
+        if name == "sources":
+            return FakeQuery(
+                [
+                    {
+                        "id": self.source_id,
+                        "url": "https://example.com/evidencia",
+                        "tipo_fonte": "oficial",
+                        "credibilidade": 0.9,
+                        "status": "coletada",
                     }
                 ]
             )
@@ -182,6 +246,28 @@ def test_run_detail_exposes_inception_fit(monkeypatch):
             response = client.get(f"/api/v1/runs/{run_id}", headers=AUTH)
         assert response.status_code == 200
         assert response.json()["inception_fit"]["eligibility_status"] == "unknown"
+        assert response.json()["assessment"]["maturity_class"] == "AI-enabled"
+        assert response.json()["assessment"]["technologies"] == ["LLM"]
+        recommendation = response.json()["recommendation"]
+        assert recommendation["technologies"][0]["name"] == "NVIDIA Triton Inference Server"
+        assert recommendation["technologies"][0]["priority"] == "high"
+        assert recommendation["opportunity_score"] == 8.6
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_run_evidences_include_traceable_source(monkeypatch):
+    monkeypatch.setenv("BACKEND_API_KEY", "test-api-key")
+    run_id = uuid4()
+    persistence = type("Persistence", (), {"db": RunDatabase(run_id)})()
+    app.dependency_overrides[get_persistence] = lambda: persistence
+    try:
+        with TestClient(app) as client:
+            response = client.get(f"/api/v1/runs/{run_id}/evidences", headers=AUTH)
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload[0]["score_confianca"] == 0.9
+        assert payload[0]["source"]["url"] == "https://example.com/evidencia"
     finally:
         app.dependency_overrides.clear()
 
@@ -196,5 +282,21 @@ def test_metrics_are_exposed_with_authentication(monkeypatch):
             )
         assert response.status_code == 200
         assert "nvidia_radar_pipeline_runs_total" not in response.text
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_dashboard_metrics_follow_frontend_contract(monkeypatch):
+    monkeypatch.setenv("BACKEND_API_KEY", "test-api-key")
+    app.dependency_overrides[get_persistence] = lambda: FakePersistence()
+    try:
+        with TestClient(app) as client:
+            response = client.get("/api/v1/metrics", headers=AUTH)
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["total_startups"] == 1
+        assert payload["total_runs"] == 0
+        assert payload["success_rate"] == 0
+        assert payload["maturity_distribution"] == {"unknown": 1}
     finally:
         app.dependency_overrides.clear()

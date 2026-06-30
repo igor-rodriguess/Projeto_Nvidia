@@ -20,8 +20,8 @@ router = APIRouter(tags=["metrics"])
 @router.get("/api/v1/metrics", dependencies=[Depends(enforce_security)])
 def metrics_json(
     persistence: PipelinePersistence = Depends(get_persistence),
-) -> dict[str, dict[str, int | float]]:
-    return _collect_metrics(persistence)
+) -> dict[str, Any]:
+    return _collect_dashboard_metrics(persistence)
 
 
 @router.get(
@@ -52,6 +52,75 @@ def _collect_metrics(persistence: PipelinePersistence) -> dict[str, dict[str, in
     metrics.update(_external_api_metrics(persistence))
     metrics["alerts"] = _derive_alerts(metrics)
     return metrics
+
+
+def _collect_dashboard_metrics(persistence: PipelinePersistence) -> dict[str, Any]:
+    startups = persistence.db.table("startups").select("id").execute().data or []
+    runs = (
+        persistence.db.table("pipeline_runs")
+        .select("id,startup_id,status,duration_ms,created_at")
+        .order("created_at", desc=True)
+        .execute()
+        .data
+        or []
+    )
+    status_counts = Counter(str(run.get("status", "unknown")) for run in runs)
+    completed_durations = [
+        float(run["duration_ms"])
+        for run in runs
+        if run.get("duration_ms") is not None and run.get("status") == "completed"
+    ]
+    today = datetime.now(UTC).date()
+    runs_today = sum(
+        1
+        for run in runs
+        if (created := _parse_datetime(run.get("created_at"))) is not None
+        and created.date() == today
+    )
+
+    latest_by_startup: dict[str, dict[str, Any]] = {}
+    for run in runs:
+        startup_id = run.get("startup_id")
+        if startup_id:
+            latest_by_startup.setdefault(str(startup_id), run)
+    latest_run_ids = [str(run["id"]) for run in latest_by_startup.values()]
+    assessments = []
+    if latest_run_ids:
+        assessments = (
+            persistence.db.table("ai_assessments")
+            .select("pipeline_run_id,classificacao")
+            .in_("pipeline_run_id", latest_run_ids)
+            .execute()
+            .data
+            or []
+        )
+    maturity_distribution = dict(
+        Counter(str(row.get("classificacao", "unknown")) for row in assessments)
+    )
+    assessed_run_ids = {str(row.get("pipeline_run_id")) for row in assessments}
+    maturity_distribution["unknown"] = max(
+        len(startups) - len(assessed_run_ids),
+        0,
+    )
+
+    total_runs = len(runs)
+    completed_runs = status_counts.get("completed", 0)
+    return {
+        "total_startups": len(startups),
+        "total_runs": total_runs,
+        "completed_runs": completed_runs,
+        "failed_runs": status_counts.get("failed", 0),
+        "partial_runs": status_counts.get("partial", 0),
+        "pending_runs": status_counts.get("pending", 0) + status_counts.get("running", 0),
+        "avg_duration_ms": (
+            round(sum(completed_durations) / len(completed_durations), 2)
+            if completed_durations
+            else None
+        ),
+        "maturity_distribution": maturity_distribution,
+        "runs_today": runs_today,
+        "success_rate": round(completed_runs / total_runs * 100, 1) if total_runs else 0,
+    }
 
 
 def _status_counts(persistence: PipelinePersistence, table: str) -> dict[str, int | float]:

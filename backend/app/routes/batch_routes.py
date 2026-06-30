@@ -54,7 +54,7 @@ def list_batches(
     limit: int = Query(default=20, ge=1, le=100),
     service: BatchProcessingService = Depends(get_batch_service),
 ) -> list[dict[str, Any]]:
-    return service.repository.list_batches(limit=limit)
+    return [_normalize_batch(batch) for batch in service.repository.list_batches(limit=limit)]
 
 
 @router.get("/{batch_id}")
@@ -72,7 +72,10 @@ def get_batch_items(
     service: BatchProcessingService = Depends(get_batch_service),
 ) -> list[dict[str, Any]]:
     statuses = {item_status} if item_status else None
-    return service.repository.list_items(batch_id, statuses=statuses)
+    return [
+        _normalize_batch_item(item)
+        for item in service.repository.list_items(batch_id, statuses=statuses)
+    ]
 
 
 @router.post(
@@ -127,7 +130,10 @@ def get_dead_letters(
     batch_id: UUID,
     service: BatchProcessingService = Depends(get_batch_service),
 ) -> list[dict[str, Any]]:
-    return service.repository.list_dead_letters(batch_id)
+    return [
+        _normalize_dead_letter(item)
+        for item in service.repository.list_dead_letters(batch_id)
+    ]
 
 
 @router.post(
@@ -146,7 +152,37 @@ def replay_dead_letter(
 def _batch_response(service: BatchProcessingService, batch_id: UUID) -> dict[str, Any]:
     try:
         batch = service.repository.get_batch(batch_id)
-        batch["items"] = service.repository.list_items(batch_id)
-        return batch
+        batch["items"] = [
+            _normalize_batch_item(item) for item in service.repository.list_items(batch_id)
+        ]
+        return _normalize_batch(batch)
     except PersistenceError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+def _normalize_batch(batch: dict[str, Any]) -> dict[str, Any]:
+    """Expose stable frontend names without changing persistence records."""
+    normalized = dict(batch)
+    normalized["completed_items"] = int(
+        batch.get("completed_items", batch.get("succeeded_items", 0)) or 0
+    )
+    normalized["processed_items"] = int(batch.get("processed_items", 0) or 0)
+    normalized["failed_items"] = int(batch.get("failed_items", 0) or 0)
+    normalized["partial_items"] = int(batch.get("partial_items", 0) or 0)
+    return normalized
+
+
+def _normalize_batch_item(item: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(item)
+    normalized["batch_id"] = item.get("batch_id") or item.get("batch_run_id")
+    normalized["startup_id"] = item.get("startup_id") or item.get("startup_external_id")
+    normalized["error_message"] = item.get("error_message") or item.get("last_error")
+    return normalized
+
+
+def _normalize_dead_letter(item: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(item)
+    normalized["batch_id"] = item.get("batch_id") or item.get("batch_run_id")
+    normalized["error_category"] = item.get("error_category") or "pipeline"
+    normalized["error_message"] = item.get("error_message") or item.get("last_error")
+    return normalized

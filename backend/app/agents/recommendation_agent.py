@@ -77,6 +77,11 @@ class RecommendationAgent:
         ).lower()
         for recommendation in raw.recomendacoes:
             technology = recommendation.tecnologia
+            if technology == "Inception":
+                alerts.append(
+                    "NVIDIA Inception foi removido do roadmap tecnico e deve ser tratado em Inception Fit."
+                )
+                continue
             chunks = chunks_by_technology.get(technology, [])
             if not chunks and self.store is not None:
                 chunks = self._retrieve_support(technology, profile.classificacao, alerts)
