@@ -10,6 +10,7 @@ import type {
   ApiMetrics,
   Evidence,
   POCBlueprint,
+  StartupDiscoveryResult,
 } from '@/types/api'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
@@ -76,6 +77,11 @@ export const listStartups = (limit = 50, offset = 0) =>
 
 export const getStartup = (id: string) =>
   api.get<Startup>(`/api/v1/startups/${id}`).then((r) => r.data)
+
+export const discoverStartups = (limit: number, offset: number) =>
+  api
+    .post<StartupDiscoveryResult>('/api/v1/startups/discover', { limit, offset }, { timeout: 180_000 })
+    .then((r) => r.data)
 
 // Runs
 export const getRunAnalysis = (runId: string) =>

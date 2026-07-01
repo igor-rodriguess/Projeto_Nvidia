@@ -1,0 +1,67 @@
+[
+  {
+    "nome": "Cashin",
+    "site": "https://www.cashin.com.br/",
+    "cidade": null,
+    "estado": null,
+    "pais": "Brasil",
+    "categoria": "Financeiro",
+    "descricao_curta": "Somos um ecossistema de incentivos de vendas que funciona de forma digital e integrada. Usamos a criatividade para resolver desafios complexos de forma eficiente, criando soluções adaptáveis às necessidades da sua empresa e canais de vendas.",
+    "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1736437707273-klcu9b9u.png",
+    "link_perfil_cubo": "https://cubo.itau/startups-portfolio/cashin",
+    "fonte": "Cubo Itaú - Vitrine de Startups",
+    "coletado_em": "2026-07-01T00:43:37.826116+00:00"
+  },
+  {
+    "nome": "Paiper",
+    "site": "https://paiper.com.br/",
+    "cidade": null,
+    "estado": null,
+    "pais": "Brasil",
+    "categoria": "Financeiro",
+    "descricao_curta": "A Paiper é uma empresa especializada em soluções tecnológicas que aprimoram o atendimento ao cliente, com foco em operações de grande escala, como cobranças, retenção de clientes e distribuição de crédito. A empresa alia tecnologia e psicologia comportamental para gerar eficiencia operacional!",
+    "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1736429852884-criy7csb.jpg",
+    "link_perfil_cubo": "https://cubo.itau/startups-portfolio/paiper",
+    "fonte": "Cubo Itaú - Vitrine de Startups",
+    "coletado_em": "2026-07-01T00:43:42.066860+00:00"
+  },
+  {
+    "nome": "Netspaces Operações LTDA",
+    "site": "https://netspaces.org",
+    "cidade": null,
+    "estado": null,
+    "pais": "Brasil",
+    "categoria": "Construção Civil",
+    "descricao_curta": "Habilitamos transacóes imobiliárias em tempo real, atraves de um exclusivo arranjo técnico-jurídico em Blockchain, com o registro do token na matrícula.",
+    "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1735552502347-nqhi5svi.png",
+    "link_perfil_cubo": "https://cubo.itau/startups-portfolio/netspaces-operaes-ltda",
+    "fonte": "Cubo Itaú - Vitrine de Startups",
+    "coletado_em": "2026-07-01T00:43:46.231203+00:00"
+  },
+  {
+    "nome": "Fiibo",
+    "site": "https://fiibo.com.br/",
+    "cidade": null,
+    "estado": null,
+    "pais": "Brasil",
+    "categoria": "Saúde",
+    "descricao_curta": "A FIIBO é um marketplace digital de saúde e benefícios (B2B2C) que conecta empresas, colaboradores e parceiros para contratar e gerir benefícios com eficiência, transparência e governança, com suporte ponta a ponta e foco em conformidade e experiência do usuário.",
+    "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1734960540583-ag1kltjq.png",
+    "link_perfil_cubo": "https://cubo.itau/startups-portfolio/fiibo",
+    "fonte": "Cubo Itaú - Vitrine de Startups",
+    "coletado_em": "2026-07-01T00:43:50.256249+00:00"
+  },
+  {
+    "nome": "Neuralmind",
+    "site": "https://neuralmind.ai/",
+    "cidade": null,
+    "estado": null,
+    "pais": "Brasil",
+    "categoria": "Produtividade",
+    "descricao_curta": "Desenvolvemos modelos de linguagem especialistas e agentes inteligentes de IA que automatizam processos e operações de ponta a ponta, aprimorando as jornadas do cliente e do colaborador. Nossos agentes otimizam atendimentos, eficiência e vendas, além de gerar insights estratégicos para decisões",
+    "logo_url": "https://storage.googleapis.com/cubo-platform.appspot.com/startups/1734535475089-akpgr0ve.png",
+    "link_perfil_cubo": "https://cubo.itau/startups-portfolio/neuralmind",
+    "fonte": "Cubo Itaú - Vitrine de Startups",
+    "coletado_em": "2026-07-01T00:43:54.242321+00:00"
+  }
+]

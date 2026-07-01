@@ -3,7 +3,11 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.routes.dependencies import get_batch_service, get_persistence
+from app.routes.dependencies import (
+    get_batch_service,
+    get_persistence,
+    get_startup_discovery_service,
+)
 
 
 AUTH = {"X-API-Key": "test-api-key"}
@@ -48,6 +52,22 @@ class FakeBatchService:
         self.runs.append((batch_id, resume))
         self.repository.batch["status"] = "completed"
         return self.repository.batch
+
+
+class FakeDiscoveryService:
+    def discover(self, limit, offset=0):
+        return {
+            "status": "success",
+            "source": "Cubo Itau - Vitrine de Startups",
+            "requested_limit": limit,
+            "source_offset": offset,
+            "collected_count": limit,
+            "curated_count": limit,
+            "created_count": 3,
+            "existing_count": limit - 3,
+            "startup_ids": [],
+            "errors": [],
+        }
 
 
 class FakeQuery:
@@ -168,6 +188,41 @@ def test_health_endpoint():
         response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_discover_startups_imports_a_controlled_batch(monkeypatch):
+    monkeypatch.setenv("BACKEND_API_KEY", "test-api-key")
+    app.dependency_overrides[get_startup_discovery_service] = lambda: FakeDiscoveryService()
+    app.dependency_overrides[get_persistence] = lambda: FakePersistence()
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/v1/startups/discover",
+                json={"limit": 10, "offset": 50},
+                headers=AUTH,
+            )
+        assert response.status_code == 200
+        assert response.json()["created_count"] == 3
+        assert response.json()["existing_count"] == 7
+        assert response.json()["source_offset"] == 50
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_discover_startups_rejects_limit_above_safety_cap(monkeypatch):
+    monkeypatch.setenv("BACKEND_API_KEY", "test-api-key")
+    app.dependency_overrides[get_startup_discovery_service] = lambda: FakeDiscoveryService()
+    app.dependency_overrides[get_persistence] = lambda: FakePersistence()
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/v1/startups/discover",
+                json={"limit": 50},
+                headers=AUTH,
+            )
+        assert response.status_code == 422
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_cors_preflight_allows_local_frontend():

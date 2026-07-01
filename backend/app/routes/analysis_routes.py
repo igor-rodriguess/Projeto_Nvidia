@@ -4,11 +4,13 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from pydantic import BaseModel, Field
 
 from app.persistence.persistence_service import PipelinePersistence
 from app.agents.poc_blueprint_agent import POCBlueprintAgent
-from app.routes.dependencies import get_persistence
-from app.routes.security import enforce_security
+from app.routes.dependencies import get_persistence, get_startup_discovery_service
+from app.routes.security import enforce_security, require_roles
+from app.services.startup_discovery_service import StartupDiscoveryService
 
 
 router = APIRouter(
@@ -16,6 +18,22 @@ router = APIRouter(
     tags=["analyses"],
     dependencies=[Depends(enforce_security)],
 )
+
+
+class StartupDiscoveryRequest(BaseModel):
+    limit: int = Field(default=10, ge=5, le=20)
+    offset: int = Field(default=0, ge=0, le=1000)
+
+
+@router.post(
+    "/startups/discover",
+    dependencies=[Depends(require_roles("admin", "analyst"))],
+)
+def discover_startups(
+    request: StartupDiscoveryRequest,
+    service: StartupDiscoveryService = Depends(get_startup_discovery_service),
+) -> dict[str, Any]:
+    return service.discover(request.limit, request.offset)
 
 
 @router.get("/startups")
@@ -26,7 +44,7 @@ def list_startups(
 ) -> list[dict[str, Any]]:
     response = (
         persistence.db.table("startups")
-        .select("id,external_id,nome,site_oficial,categoria,cidade,estado,pais,created_at")
+        .select("id,external_id,nome,site_oficial,categoria,cidade,estado,pais,metadata,created_at")
         .order("created_at", desc=True)
         .range(offset, offset + limit - 1)
         .execute()
@@ -79,6 +97,9 @@ def list_startups(
         for recommendation in recommendations
     }
     for startup in startups:
+        metadata = startup.get("metadata") if isinstance(startup.get("metadata"), dict) else {}
+        startup["descricao_curta"] = metadata.get("descricao_curta")
+        startup["logo_url"] = metadata.get("logo_url")
         latest = latest_runs.get(str(startup["id"]))
         startup["pipeline_runs"] = [latest] if latest else []
         assessment = assessment_by_run.get(str(latest["id"])) if latest else None
@@ -98,6 +119,9 @@ def get_startup(
     )
     if not startup:
         raise HTTPException(status_code=404, detail="Startup nao encontrada")
+    metadata = startup.get("metadata") if isinstance(startup.get("metadata"), dict) else {}
+    startup["descricao_curta"] = metadata.get("descricao_curta")
+    startup["logo_url"] = metadata.get("logo_url")
     runs = (
         persistence.db.table("pipeline_runs")
         .select("id,status,current_stage,started_at,finished_at,duration_ms,created_at")

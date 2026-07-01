@@ -28,11 +28,28 @@ export interface Startup {
   cidade: string | null
   estado: string | null
   pais: string | null
+  descricao_curta?: string | null
+  logo_url?: string | null
   created_at: string
   maturity_class?: MaturityClass
   maturity_level?: number | null
   fit_score?: number | null
   pipeline_runs?: PipelineRunSummary[]
+}
+
+export interface StartupDiscoveryResult {
+  status: 'success' | 'partial'
+  source: string
+  requested_limit: number
+  source_offset: number
+  collected_count: number
+  curated_count: number
+  created_count: number
+  existing_count: number
+  startup_ids: string[]
+  batch_id: string | null
+  analysis_queued_count: number
+  errors: Array<{ startup_index?: number; mensagem?: string }>
 }
 
 // ------------------------------------------------------------------

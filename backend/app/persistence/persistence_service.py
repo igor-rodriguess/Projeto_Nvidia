@@ -70,11 +70,16 @@ class PipelinePersistence:
 
     def save_startup(self, data: dict[str, Any]) -> UUID:
         """Return an existing startup UUID or insert a validated startup."""
+        startup_id, _ = self.save_startup_with_status(data)
+        return startup_id
+
+    def save_startup_with_status(self, data: dict[str, Any]) -> tuple[UUID, bool]:
+        """Persist a startup and report whether a new row was created."""
         try:
             startup = Startup.model_validate(data)
             existing = self._find_startup(startup)
             if existing:
-                return UUID(existing["id"])
+                return UUID(existing["id"]), False
 
             payload = startup.model_dump(
                 mode="json",
@@ -85,11 +90,11 @@ class PipelinePersistence:
             row = self._require_first(response, "startups.insert")
             startup_id = UUID(row["id"])
             LOGGER.info("persistence_startup_saved", startup_id=str(startup_id), nome=startup.nome)
-            return startup_id
+            return startup_id, True
         except PersistenceError:
             raise
         except Exception as exc:
-            raise self._handle_error("save_startup", exc) from exc
+            raise self._handle_error("save_startup_with_status", exc) from exc
 
     def create_pipeline_run(self, startup_id: UUID) -> UUID:
         """Create a running pipeline execution and return its UUID."""

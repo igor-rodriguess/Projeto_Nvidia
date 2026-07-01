@@ -111,11 +111,13 @@ def calcular_score_relevancia_ia(texto: str) -> dict[str, Any]:
 
 def coletar_startups_cubo(
     limit: int | None = None,
+    offset: int = 0,
     output_dir: Path = RAW_DATA_DIR,
     delay_seconds: float = DEFAULT_DELAY_SECONDS,
 ) -> list[StartupCubo]:
     startups, _ = coletar_startups_cubo_com_erros(
         limit=limit,
+        offset=offset,
         output_dir=output_dir,
         delay_seconds=delay_seconds,
     )
@@ -124,12 +126,18 @@ def coletar_startups_cubo(
 
 def coletar_startups_cubo_com_erros(
     limit: int | None = None,
+    offset: int = 0,
     output_dir: Path = RAW_DATA_DIR,
     delay_seconds: float = DEFAULT_DELAY_SECONDS,
 ) -> tuple[list[StartupCubo], list[dict[str, Any]]]:
     LOGGER.info("Iniciando coleta da vitrine do Cubo Itau")
     erros: list[dict[str, Any]] = []
-    startups = _coletar_via_api(limit=limit, erros=erros, delay_seconds=delay_seconds)
+    startups = _coletar_via_api(
+        limit=limit,
+        offset=offset,
+        erros=erros,
+        delay_seconds=delay_seconds,
+    )
     origem = "api"
 
     if not startups:
@@ -137,13 +145,15 @@ def coletar_startups_cubo_com_erros(
         markdown = _buscar_markdown_jina()
         if markdown:
             _salvar_markdown(markdown, output_dir)
-            startups = _extrair_startups_markdown(markdown, limit)
+            fallback_limit = offset + limit if limit is not None else None
+            startups = _extrair_startups_markdown(markdown, fallback_limit)[offset:]
             origem = "jina"
 
     if not startups:
         LOGGER.warning("Fallback Jina falhou ou retornou vazio. Tentando HTML bruto")
         html = _buscar_html_bruto()
-        startups = _extrair_startups_html(html, limit) if html else []
+        fallback_limit = offset + limit if limit is not None else None
+        startups = _extrair_startups_html(html, fallback_limit)[offset:] if html else []
         origem = "html"
 
     startups = _remover_duplicatas_por_nome(startups)
@@ -167,12 +177,14 @@ def scrape_cubo_startups_portfolio(limit: int = 10) -> dict[str, Any]:
 
 def _coletar_via_api(
     limit: int | None = None,
+    offset: int = 0,
     erros: list[dict[str, Any]] | None = None,
     delay_seconds: float = DEFAULT_DELAY_SECONDS,
 ) -> list[StartupCubo]:
     LOGGER.info("Tentando coleta via API publica: %s", CUBO_API_URL)
     startups: list[StartupCubo] = []
-    page = 1
+    page = (offset // DEFAULT_LIMIT) + 1
+    items_to_skip = offset % DEFAULT_LIMIT
     target_limit = limit or DEFAULT_LIMIT
 
     while True:
@@ -194,7 +206,7 @@ def _coletar_via_api(
 
         items = payload.get("startups", [])
         LOGGER.info("API pagina %s retornou %s startups", page, len(items))
-        for item in items:
+        for item in items[items_to_skip:]:
             startup_index = len(startups)
             detail = _buscar_detalhe_startup_api(item, startup_index, erros)
             html = _buscar_html_perfil(item, startup_index, erros)
@@ -209,6 +221,7 @@ def _coletar_via_api(
             break
 
         page += 1
+        items_to_skip = 0
 
     return startups
 

@@ -72,6 +72,12 @@ export const StartupCard: React.FC<StartupCardProps> = ({ startup, maturity }) =
         )}
       </div>
 
+      {startup.descricao_curta && (
+        <p className="text-sm text-muted mb-3" style={{ lineHeight: 1.5 }}>
+          {startup.descricao_curta}
+        </p>
+      )}
+
       <div className="flex items-center justify-between flex-wrap gap-2">
         {maturity ? (
           <MaturityBadge maturity={maturity} />

@@ -101,6 +101,35 @@ def test_coletar_startups_cubo_uses_api_pagination(monkeypatch, tmp_path):
     assert list(tmp_path.glob("vitrine_cubo_*.json"))
 
 
+def test_coletar_startups_cubo_resumes_from_source_offset(monkeypatch, tmp_path):
+    requested_pages = []
+
+    def fake_get(url, params=None, headers=None, timeout=None):
+        if "api.site.cubo.itau/startups/" in url:
+            return FakeResponse(json_data={"siteUrl": "startup51.example"})
+        if "cubo.itau/startups-portfolio/" in url:
+            return FakeResponse(text="<main></main>")
+        requested_pages.append(params["page"])
+        return FakeResponse(
+            json_data={
+                "startups": [_api_item("51", "startup-51", "Startup 51", "Dados")],
+                "hasNext": False,
+            }
+        )
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    startups = coletar_startups_cubo(
+        limit=1,
+        offset=50,
+        output_dir=tmp_path,
+        delay_seconds=0,
+    )
+
+    assert requested_pages == [2]
+    assert [startup.nome for startup in startups] == ["Startup 51"]
+
+
 def test_scrape_cubo_startups_portfolio_reports_missing_detail_fields(monkeypatch, tmp_path):
     def fake_get(url, params=None, headers=None, timeout=None):
         if "api.site.cubo.itau/startups/" in url:

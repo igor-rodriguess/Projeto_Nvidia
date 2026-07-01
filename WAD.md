@@ -189,7 +189,7 @@ FastAPI expõe documentação em `/docs` e OpenAPI em `/openapi.json`.
 |---|---|
 | Saúde | `/health`, `/ready` |
 | Dashboard | `/api/v1/metrics` |
-| Startups | `/api/v1/startups`, `/api/v1/startups/{id}` |
+| Startups | `/api/v1/startups`, `/api/v1/startups/{id}`, `/api/v1/startups/discover` |
 | Execuções | `/api/v1/runs/{id}`, `/evidences`, `/briefing`, `/poc-blueprint` |
 | Lotes | criação, listagem, detalhe, itens, run, resume, cancel e DLQ |
 | Autenticação | revogação de token |

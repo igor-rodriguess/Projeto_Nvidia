@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
-![Tests](https://img.shields.io/badge/tests-143%20passing-76B900)
+![Tests](https://img.shields.io/badge/tests-148%20passing-76B900)
 ![License](https://img.shields.io/badge/license-not%20defined-lightgrey)
 
 ## 📋 Índice
@@ -61,6 +61,7 @@ O detalhamento das decisões e contratos está em [WAD.md](WAD.md).
 ## ⚙️ Funcionalidades Principais
 
 - Scraping resiliente do portfólio Cubo Itaú com camadas RAW, PROCESSED e CURATED.
+- Descoberta incremental de novas startups pelo painel, com paginação da fonte e importação idempotente.
 - Investigação pública com planejamento de consultas, cache e fallback de provedores.
 - Evidências rastreáveis por URL, trecho, tipo de fonte e confiança.
 - Classificação `AI-native`, `AI-enabled`, `API-consumer` ou `Non-AI`.
@@ -95,7 +96,24 @@ cp frontend/.env.example frontend/.env.local
 
 Preencha as variáveis do Supabase. Use somente a chave publicável no frontend; a chave secreta deve permanecer no backend.
 
-### 2. Subir Qdrant e SearXNG
+### 2. Inicialização completa recomendada
+
+O comando abaixo inicia Qdrant, SearXNG, API, worker e frontend. O worker permanece ativo e processa automaticamente os lotes criados pela descoberta de startups.
+
+```bash
+docker compose --profile backend up -d --build
+docker compose --profile backend ps
+```
+
+Acesse `http://127.0.0.1:5173`. Para acompanhar uma análise:
+
+```bash
+docker compose logs -f worker
+```
+
+### 3. Inicialização manual para desenvolvimento
+
+Suba primeiro Qdrant e SearXNG:
 
 ```bash
 docker compose up -d qdrant searxng
@@ -105,7 +123,7 @@ docker compose ps
 - Qdrant: `http://localhost:6333/dashboard`
 - SearXNG: `http://localhost:8080`
 
-### 3. Instalar e preparar o backend
+### 4. Instalar e preparar o backend
 
 ```bash
 cd backend
@@ -133,7 +151,7 @@ python scripts/apply_supabase_migration.py
 python scripts/ingest_nvidia_knowledge.py
 ```
 
-### 4. Iniciar API e worker
+### 5. Iniciar API e worker
 
 Em terminais separados, dentro de `backend/`:
 
@@ -142,13 +160,7 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 python scripts/run_batch_worker.py --poll-seconds 5
 ```
 
-Alternativamente, API, worker, Qdrant e SearXNG podem rodar em containers:
-
-```bash
-docker compose --profile backend up -d --build
-```
-
-### 5. Iniciar o frontend
+### 6. Iniciar o frontend
 
 ```bash
 cd frontend
@@ -183,7 +195,7 @@ Projeto_Nvidia/
 │   │   ├── scraping/        # Scraper do Cubo Itaú
 │   │   └── services/        # Pipeline, worker e retenção
 │   ├── scripts/             # Operação, ingestão, backup e auditoria
-│   └── tests/               # 143 testes automatizados
+│   └── tests/               # 148 testes automatizados
 ├── frontend/
 │   └── src/
 │       ├── components/      # UI, gráficos, lotes e pipeline
@@ -206,6 +218,7 @@ Projeto_Nvidia/
 | GET | `/api/v1/metrics` | Métricas do dashboard |
 | GET | `/api/v1/startups` | Lista startups e última classificação |
 | GET | `/api/v1/startups/{id}` | Perfil e histórico de execuções |
+| POST | `/api/v1/startups/discover` | Coleta, lapida e importa novas startups do Cubo |
 | GET | `/api/v1/runs/{id}` | Diagnóstico, recomendação, impacto e briefing |
 | GET | `/api/v1/runs/{id}/evidences` | Evidências e fontes rastreáveis |
 | GET | `/api/v1/runs/{id}/briefing` | Briefing em Markdown |
@@ -229,7 +242,7 @@ npm run lint
 npm run build
 ```
 
-O backend possui 143 testes cobrindo agentes, RAG, persistência, segurança, API, worker, carga, caos e aceitação. O CI também executa lint, type checking, Gitleaks, build Docker e smoke tests.
+O backend possui 148 testes cobrindo agentes, RAG, persistência, segurança, API, worker, carga, caos e aceitação. O CI também executa lint, type checking, Gitleaks, build Docker e smoke tests.
 
 ## 📊 Base de Conhecimento NVIDIA
 
